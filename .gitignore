@@ -1,0 +1,11 @@
+################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/
+**/bin/
+**/obj
+**/db_*/
+*.~vsdx
+**/Joboutputs.*.csv
+**/appsettings.overrides.json

@@ -1,0 +1,53 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31313.79
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Servicebus.JobScheduler.Core", "src\Servicebus.JobScheduler.Core\Servicebus.JobScheduler.Core.csproj", "{30DFCEE2-D209-4608-9D40-B6546551FF81}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{766D5D7A-9A5D-4011-8D4B-38FC752DAFDD}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		aks-deployment.yml = aks-deployment.yml
+		Dockerfile = Dockerfile
+		README.md = README.md
+		TopicsFlow.vsdx = TopicsFlow.vsdx
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Servicebus.JobScheduler.ExampleApp", "src\Servicebus.JobScheduler.ExampleApp\Servicebus.JobScheduler.ExampleApp.csproj", "{D9FD8938-A3B5-43C7-B85B-55977A622A16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Servicebus.JobScheduler.TestUtils", "src\Servicebus.JobScheduler.TestUtils\Servicebus.JobScheduler.TestUtils.csproj", "{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Servicebus.JobScheduler.ExampleApp.Common", "Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj", "{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{30DFCEE2-D209-4608-9D40-B6546551FF81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30DFCEE2-D209-4608-9D40-B6546551FF81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30DFCEE2-D209-4608-9D40-B6546551FF81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30DFCEE2-D209-4608-9D40-B6546551FF81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9FD8938-A3B5-43C7-B85B-55977A622A16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9FD8938-A3B5-43C7-B85B-55977A622A16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9FD8938-A3B5-43C7-B85B-55977A622A16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9FD8938-A3B5-43C7-B85B-55977A622A16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5225C48C-F7B7-4CF6-B426-DBC02396CFAE}
+	EndGlobalSection
+EndGlobal
