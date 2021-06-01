@@ -1,0 +1,22 @@
+{
+  "profiles": {
+    "AllSystem": {
+      "commandName": "Project",
+      "commandLineArgs": "-r myRun-11 -t true"
+
+    },
+    "AllFails": {
+      "commandName": "Project",
+      "commandLineArgs": "-r myRun-8000 -t true -x 90"
+
+    },
+    "ImmediateScheduleRule_Validation": {
+      "commandName": "Project",
+      "commandLineArgs": "-m JobDefinitionChange_ImmediateScheduleRule ReadyToRunJobWindow_Validation"
+    },
+    "OnlyTester": {
+      "commandName": "Project",
+      "commandLineArgs": "--all-modes false -r 200"
+    }
+  }
+}

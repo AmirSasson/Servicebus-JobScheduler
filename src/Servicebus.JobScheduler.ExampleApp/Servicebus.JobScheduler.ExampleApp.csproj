@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="db_*/**" />
+    <None Remove="**/Joboutputs.*.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj" />
+    <ProjectReference Include="..\Servicebus.JobScheduler.Core\Servicebus.JobScheduler.Core.csproj" />
+    <ProjectReference Include="..\Servicebus.JobScheduler.TestUtils\Servicebus.JobScheduler.TestUtils.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="*.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
