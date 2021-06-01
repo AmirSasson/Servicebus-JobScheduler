@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -19,9 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj" />
     <ProjectReference Include="..\Servicebus.JobScheduler.Core\Servicebus.JobScheduler.Core.csproj" />
     <ProjectReference Include="..\Servicebus.JobScheduler.TestUtils\Servicebus.JobScheduler.TestUtils.csproj" />
+    <ProjectReference Include="..\Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj" />
+
   </ItemGroup>
 
   <ItemGroup>

@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Servicebus.JobScheduler.Core.Bus;
 using Servicebus.JobScheduler.Core.Contracts;
+using Servicebus.JobScheduler.ExampleApp.Common;
 using Servicebus.JobScheduler.ExampleApp.Emulators;
 using Servicebus.JobScheduler.ExampleApp.Handlers;
+using Servicebus.JobScheduler.ExampleApp.Messages;
 using System;
 using System.Linq;
 using System.Runtime.Loader;
@@ -119,7 +121,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 bus = new AzureServiceBusService<Topics, Subscriptions>(config, loggerFactory.CreateLogger<AzureServiceBusService<Topics, Subscriptions>>(), o.RunId);
             }
 
-            var db = new SimpleFilePerJobDefinitionRepository($"db_{o.RunId}");
+            IRepository<JobDefinition> db = new SimpleFilePerJobDefinitionRepository($"db_{o.RunId}");
             var token = source.Token;
 
             if (o.SetupServiceBus == true)
@@ -127,6 +129,30 @@ namespace Servicebus.JobScheduler.ExampleApp
                 await bus.SetupEntitiesIfNotExist();
             }
 
+            await buildTopicFlowTree(o, loggerFactory, source, bus, db);
+
+
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed           
+            if (o.RunSimulator == true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                UpsertsClientSimulator.Run(bus, initialRuleCount: 0, delayBetweenUpserts: TimeSpan.FromSeconds(1000), maxConcurrentRules: 1, runId: o.RunId, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(5), token);
+            }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
+
+        /// <summary>
+        /// this build the topic tree described in the TopicFLow.vsdx
+        /// </summary>
+        /// <param name="o">the options</param>
+        /// <param name="loggerFactory">logger Factory</param>
+        /// <param name="source">app Cancellation Token Source</param>
+        /// <param name="bus">message bus refrence</param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        private static async Task buildTopicFlowTree(ProgramOptions o, ILoggerFactory loggerFactory, CancellationTokenSource source, IMessageBus<Topics, Subscriptions> bus, IRepository<JobDefinition> db)
+        {
             if (o.ShouldRunMode(Subscriptions.JobDefinitionChange_ImmediateScheduleRule))
             {
                 await bus.RegisterSubscriber(
@@ -209,16 +235,6 @@ namespace Servicebus.JobScheduler.ExampleApp
                    null,
                    source);
             }
-
-
-
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed           
-            if (o.RunSimulator == true)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                UpsertsClientSimulator.Run(bus, initialRuleCount: 0, delayBetweenUpserts: TimeSpan.FromSeconds(1000), maxConcurrentRules: 1, runId: o.RunId, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(5), token);
-            }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
         private static void setConsoleTitle(ProgramOptions o)

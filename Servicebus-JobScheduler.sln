@@ -17,9 +17,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Servicebus.JobScheduler.ExampleApp", "src\Servicebus.JobScheduler.ExampleApp\Servicebus.JobScheduler.ExampleApp.csproj", "{D9FD8938-A3B5-43C7-B85B-55977A622A16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Servicebus.JobScheduler.TestUtils", "src\Servicebus.JobScheduler.TestUtils\Servicebus.JobScheduler.TestUtils.csproj", "{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Servicebus.JobScheduler.TestUtils", "src\Servicebus.JobScheduler.TestUtils\Servicebus.JobScheduler.TestUtils.csproj", "{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Servicebus.JobScheduler.ExampleApp.Common", "Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj", "{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Servicebus.JobScheduler.ExampleApp.Common", "src\Servicebus.JobScheduler.ExampleApp.Common\Servicebus.JobScheduler.ExampleApp.Common.csproj", "{279BF58A-2712-4373-969F-8279C067A1BA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,10 +39,10 @@ Global
 		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0B03D89-2FC1-4E96-AAAD-82F634BA75D0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A2ACF93A-A925-466A-ADD9-973FDB5C2CD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{279BF58A-2712-4373-969F-8279C067A1BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{279BF58A-2712-4373-969F-8279C067A1BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{279BF58A-2712-4373-969F-8279C067A1BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{279BF58A-2712-4373-969F-8279C067A1BA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

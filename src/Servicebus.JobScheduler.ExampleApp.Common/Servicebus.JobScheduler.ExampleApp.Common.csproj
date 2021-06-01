@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Servicebus.JobScheduler.Core\Servicebus.JobScheduler.Core.csproj" />
+    <ProjectReference Include="..\Servicebus.JobScheduler.Core\Servicebus.JobScheduler.Core.csproj" />
   </ItemGroup>
 
 </Project>
