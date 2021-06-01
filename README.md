@@ -21,11 +21,11 @@ see TopicsFlow.vsdx visio file for logical flow
 
 ## setup:
 ```bash
-    git clone <<this repo>>
+    git clone https://github.com/AmirSasson/Servicebus-JobScheduler.git
     cd Servicebus-JobScheduler   
     code .
 ```
-- form using azure ServiceBus, add `appsettings.overrides.json` <u>next to</u> existing`appsettings.json` with content:
+- for using azure ServiceBus, add `appsettings.overrides.json` under `src/Servicebus.JobScheduler.ExampleApp` <u>next to</u> existing`appsettings.json` with content:
 
 ```
 {
@@ -53,17 +53,17 @@ see TopicsFlow.vsdx visio file for logical flow
 
 
 ### deploy (cloud)
-currently this app is [running](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/78ffdd91-611e-402f-8a7e-7ab0b209b7c6/resourceGroups/amir_sasson_tests/providers/Microsoft.ContainerService/managedClusters/amir_aks_tests/namespaces) as linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
+currently this app is running as a linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
 #### dockerize:
 from root folder run:  
 [create](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal) an azure container registry, with admin credentials you can provide to the login command  
 ```
 docker login <<registryname>>.azurecr.io
-docker build -t <<registryname>>.azurecr.io/<<my-container-name>>:latest .
-docker push --all-tags <<registryname>>.azurecr.io/<<my-container-name>>
+docker build -t <<registryname>>.azurecr.io/<<my-repository-name>>:latest .
+docker push --all-tags <<registryname>>.azurecr.io/<<my-repository-name>>
 ```
 to run the container locally:
-`docker run <<registryname>>.azurecr.io/<<my-container-name>>:latest`
+`docker run <<registryname>>.azurecr.io/<<my-repository-name>>:latest`
 - currently as docker container on AKS (linux), aks deployment yml included.
 
 ###### troubleshooting:
