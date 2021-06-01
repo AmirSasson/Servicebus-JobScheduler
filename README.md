@@ -4,7 +4,7 @@ this project includes also a client simulator that initiated new Job Definitions
 #### how it works?
 using Publish Subscribe, the console application when starting, registers subscribers (handlers) to service bus topic subscriptions.  
 Each handler, processes the message and publishes to next topic if needed.
-To initiate the process, the Tester Client simulates Rule Upserts.
+To initiate the process, the Tester Client simulates JobDefinition Upserts.
 see TopicsFlow.vsdx visio file for logical flow
 ##### Simulator capabilties:
 - flexabilty to run as single process, or process that regsieters one or more handlers
