@@ -59,11 +59,11 @@ from root folder run:
 [create](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal) an azure container registry, with admin credentials you can provide to the login command  
 ```
 docker login <<registryname>>.azurecr.io
-docker build -t <<registryname>>.azurecr.io/<<my-container-name>>:latest .
-docker push --all-tags <<registryname>>.azurecr.io/<<my-container-name>>
+docker build -t <<registryname>>.azurecr.io/<<my-repository-name>>:latest .
+docker push --all-tags <<registryname>>.azurecr.io/<<my-repository-name>>
 ```
 to run the container locally:
-`docker run <<registryname>>.azurecr.io/<<my-container-name>>:latest`
+`docker run <<registryname>>.azurecr.io/<<my-repository-name>>:latest`
 - currently as docker container on AKS (linux), aks deployment yml included.
 
 ###### troubleshooting:

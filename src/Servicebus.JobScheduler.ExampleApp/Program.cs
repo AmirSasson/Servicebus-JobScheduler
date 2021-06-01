@@ -137,7 +137,7 @@ namespace Servicebus.JobScheduler.ExampleApp
             if (o.RunSimulator == true)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                UpsertsClientSimulator.Run(bus, initialRuleCount: 0, delayBetweenUpserts: TimeSpan.FromSeconds(1000), maxConcurrentRules: 1, runId: o.RunId, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(5), token);
+                UpsertsClientSimulator.Run(bus, initialRuleCount: 200, delayBetweenUpserts: TimeSpan.FromSeconds(1500), maxConcurrentRules: 250, runId: o.RunId, db, logger, maxUpserts: 300, ruleInterval: TimeSpan.FromMinutes(5), token);
             }
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }

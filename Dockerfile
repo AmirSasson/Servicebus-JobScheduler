@@ -10,10 +10,12 @@ RUN ls -la
 COPY . .
 RUN ls -la
 RUN dotnet restore "src/Servicebus.JobScheduler.ExampleApp/Servicebus.JobScheduler.ExampleApp.csproj"
-RUN ls -l
-COPY . .
-WORKDIR "/src/Servicebus.JobScheduler.ExampleApp"
-RUN dotnet build "Servicebus.JobScheduler.ExampleApp.csproj" -c Release -o /app/build
+RUN ls -la
+#COPY . .
+#RUN ls -la
+#COPY . .
+#WORKDIR "/src/Servicebus.JobScheduler.ExampleApp"
+RUN dotnet build "src/Servicebus.JobScheduler.ExampleApp/Servicebus.JobScheduler.ExampleApp.csproj" -c Release -o /app/build
 
 FROM build AS publish
 RUN dotnet publish "Servicebus.JobScheduler.ExampleApp.csproj" -c Release -o /app/publish

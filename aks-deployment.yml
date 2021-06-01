@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: MyServiceBusJobScheduler
+  name: sbus-jobsched
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: MyServiceBusJobScheduler
+      app: sbus-jobsched
   template:
     metadata:
       labels:
-        app: MyServiceBusJobScheduler
+        app: sbus-jobsched
     spec:
       nodeSelector:
         "beta.kubernetes.io/os": linux
       containers:
-      - name: MyServiceBusJobScheduler
-        image:  <<registryname>>.azurecr.io/<<my-container-name>>:latest
+      - name: sbus-jobsched
+        image:  <<registryname>>.azurecr.io/<<my-repository-name>>:latest
         env:
         - name: ALLOW_EMPTY_PASSWORD
           value: "yes"
@@ -29,15 +29,16 @@ spec:
             memory: 256Mi
         ports:
         - containerPort: 6379
-          name: MyServiceBusJobScheduler
+          name: sbus-jobsched
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: MyServiceBusJobScheduler
+  name: sbus-jobsched
 spec:
   ports:
   - port: 6379
   selector:
-    app: MyServiceBusJobScheduler
+    app: sbus-jobsched
 ---
+sbus-jobsched
