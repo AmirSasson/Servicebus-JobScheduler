@@ -45,6 +45,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 MessageId = msg.Id,
                 ContentType = "application/json",
                 Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType())),
+                PartitionKey = msg.Id
             };
             if (executeOnUtc.HasValue)
             {
@@ -68,13 +69,16 @@ namespace Servicebus.JobScheduler.Core.Bus
         {
 
             var subscriptionClient = _clientEntities.GetOrAdd(
-                EntityNameHelper.FormatSubscriptionPath(topic.ToString(),
-                 subscription.ToString()), new SubscriptionClient(
-               connectionString: _connectionString,
-               topicPath: topic.ToString(),
-               subscriptionName: subscription.ToString(),
-               ReceiveMode.PeekLock,
-               retryPolicy: new Microsoft.Azure.ServiceBus.RetryExponential(TimeSpan.FromSeconds(10), TimeSpan.FromHours(3), 20))) as SubscriptionClient;
+                EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
+                 new SubscriptionClient(
+                    connectionString: _connectionString,
+                    topicPath: topic.ToString(),
+                    subscriptionName: subscription.ToString(),
+                    ReceiveMode.PeekLock,
+                    retryPolicy: new Microsoft.Azure.ServiceBus.RetryExponential(TimeSpan.FromSeconds(10), TimeSpan.FromHours(3), 20)
+                    )
+                )
+                as SubscriptionClient;
 
             if (deadLetterRetrying != null)
             {
@@ -179,7 +183,8 @@ namespace Servicebus.JobScheduler.Core.Bus
                 {
                     var options = new CreateTopicOptions(topicName)
                     {
-                        MaxSizeInMegabytes = 1024
+                        MaxSizeInMegabytes = 1024,
+                        //EnablePartitioning = true,
                     };
                     _logger.LogCritical($"creating missing topic {topicName}");
                     await adminClient.CreateTopicAsync(options);
