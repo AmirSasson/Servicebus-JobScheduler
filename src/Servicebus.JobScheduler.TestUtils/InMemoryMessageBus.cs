@@ -13,7 +13,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
     {
         class DummyMessage : IMessageBase
         {
-            public string Id =>"1";
+            public string Id => "1";
 
             public string RunId => "1";
         }
@@ -80,6 +80,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             subs.Add(handler);
             _eventHandlers[subscription] = subs;
             return Task.FromResult(true);
-        }    
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

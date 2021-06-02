@@ -22,17 +22,19 @@ namespace Servicebus.JobScheduler.ExampleApp
             return await Parser.Default.ParseArguments<ProgramOptions>(args)
               .MapResult(async o =>
               {
+                  var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
                   IConfiguration config = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json", false, false)
-                    .AddJsonFile("appsettings.overrides.json", false, false)
+                    .AddJsonFile($"appsettings.{environmentName}.json", true, false)
+                    .AddJsonFile("appsettings.overrides.json", true, false)
                     .Build();
 
                   ILoggerFactory loggerFactory = ConfigureLogger();
                   ILogger logger = loggerFactory.CreateLogger("System");
 
                   var (done, cts) = ConfigureServer(logger);
-                  await startAppWithOptions(o, loggerFactory, logger, config, cts);
-                  Block(done, cts);
+                  var engine = await startAppWithOptions(o, loggerFactory, logger, config, cts);
+                  Block(engine, done, cts);
                   return 0;
               },
               errs =>
@@ -94,17 +96,17 @@ namespace Servicebus.JobScheduler.ExampleApp
             return (done, cts);
         }
 
-        public static void Block(ManualResetEventSlim done, CancellationTokenSource cts)
+        public static void Block(IAsyncDisposable engineToDispose, ManualResetEventSlim done, CancellationTokenSource cts)
         {
-            cts.Token.WaitHandle.WaitOne(); // the actual block                
-
-            Task.Delay(2000).Wait();
+            cts.Token.WaitHandle.WaitOne(); // the actual block
+            engineToDispose.DisposeAsync().ConfigureAwait(false);
+            Task.Delay(5000).Wait();
             // wait for all component to dispose
             done.Set();
             cts.Dispose();
         }
 
-        private static async Task startAppWithOptions(ProgramOptions o, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
+        private static async Task<IAsyncDisposable> startAppWithOptions(ProgramOptions o, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
         {
             setConsoleTitle(o);
 
@@ -133,13 +135,14 @@ namespace Servicebus.JobScheduler.ExampleApp
 
 
 
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed           
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             if (o.RunSimulator == true)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 UpsertsClientSimulator.Run(bus, initialRuleCount: 200, delayBetweenUpserts: TimeSpan.FromSeconds(1500), maxConcurrentRules: 250, runId: o.RunId, db, logger, maxUpserts: 300, ruleInterval: TimeSpan.FromMinutes(5), token);
             }
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            return bus;
         }
 
         /// <summary>

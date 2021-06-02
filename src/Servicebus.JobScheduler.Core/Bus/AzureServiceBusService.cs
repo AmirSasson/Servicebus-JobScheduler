@@ -7,6 +7,8 @@ using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
 using Servicebus.JobScheduler.Core.Utils;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -20,6 +22,7 @@ namespace Servicebus.JobScheduler.Core.Bus
         private readonly ILogger _logger;
         private readonly string _runId;
         private readonly string _connectionString;
+        private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new();
 
         public AzureServiceBusService(IConfiguration config, ILogger logger, string runId)
         {
@@ -35,7 +38,8 @@ namespace Servicebus.JobScheduler.Core.Bus
 
         public async Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
         {
-            TopicClient topicClient = new(connectionString: _connectionString, entityPath: topic.ToString());
+            var topicClient = _clientEntities.GetOrAdd(topic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: topic.ToString())) as TopicClient;
+
             Message message = new()
             {
                 MessageId = msg.Id,
@@ -62,14 +66,15 @@ namespace Servicebus.JobScheduler.Core.Bus
         public async Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, int simulateFailurePercents, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
             where T : class, IMessageBase
         {
-            SubscriptionClient subscriptionClient = new(
+
+            var subscriptionClient = _clientEntities.GetOrAdd(
+                EntityNameHelper.FormatSubscriptionPath(topic.ToString(),
+                 subscription.ToString()), new SubscriptionClient(
                connectionString: _connectionString,
                topicPath: topic.ToString(),
                subscriptionName: subscription.ToString(),
                ReceiveMode.PeekLock,
-               retryPolicy: new Microsoft.Azure.ServiceBus.RetryExponential(TimeSpan.FromSeconds(10), TimeSpan.FromHours(3), 20)
-              );
-
+               retryPolicy: new Microsoft.Azure.ServiceBus.RetryExponential(TimeSpan.FromSeconds(10), TimeSpan.FromHours(3), 20))) as SubscriptionClient;
 
             if (deadLetterRetrying != null)
             {
@@ -115,12 +120,13 @@ namespace Servicebus.JobScheduler.Core.Bus
         {
             var dlpath = EntityNameHelper.FormatDeadLetterPath(EntityNameHelper.FormatSubscriptionPath(retriesTopic.ToString(), subscription.ToString()));
 
-            var deadQueueReceiver = new MessageReceiver(_connectionString, dlpath);
+            var deadQueueReceiver = _clientEntities.GetOrAdd(dlpath.ToString(), new MessageReceiver(_connectionString, dlpath)) as MessageReceiver;
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
-                TopicClient topicClient = new(connectionString: _connectionString, entityPath: retriesTopic.ToString());
+                var topicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: retriesTopic.ToString())) as TopicClient;
+                var permenantTopicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: retry.PermanentErrorsTopic.ToString())) as TopicClient;
 
                 while (!source.IsCancellationRequested)
                 {
@@ -151,7 +157,6 @@ namespace Servicebus.JobScheduler.Core.Bus
                         else
                         {
                             _logger.LogCritical($"Reries were exhusted !! moving to {retry.PermanentErrorsTopic}");
-                            TopicClient permenantTopicClient = new(connectionString: _connectionString, entityPath: retry.PermanentErrorsTopic.ToString());
                             await permenantTopicClient.SendAsync(reSubmit);
                             await deadQueueReceiver.CompleteAsync(msg.SystemProperties.LockToken);
                         }
@@ -209,6 +214,35 @@ namespace Servicebus.JobScheduler.Core.Bus
                 }
             }
 
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            _logger.LogCritical($"Gracefully disposing Engine!");
+            IEnumerable<Task> unRegisterTasks = _clientEntities.Values
+                .Where(c => c is SubscriptionClient)
+                .Cast<SubscriptionClient>()
+                .Select(c =>
+                {
+                    _logger.LogCritical($"Stopping listener.. {c.Path}...");
+                    var t = c.UnregisterMessageHandlerAsync(TimeSpan.FromSeconds(0.5));
+                    t.ConfigureAwait(false);
+                    return t;
+                });
+
+            await Task.WhenAll(unRegisterTasks.ToArray()).ConfigureAwait(false);
+            await Task.Delay(3500);
+            _logger.LogCritical($"Closing connections!");
+
+            var closingTasks = _clientEntities.Values.Select(c =>
+            {
+                _logger.LogCritical($"Closing client {c.Path}...");
+                var t = c.CloseAsync();
+                t.ConfigureAwait(false);
+                return t;
+            });
+            await Task.WhenAll(closingTasks.ToArray()).ConfigureAwait(false);
+            _logger.LogCritical($"All connections gracefully closed");
         }
     }
 }
