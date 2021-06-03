@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
 using System;
 using System.Threading;
@@ -10,6 +11,6 @@ namespace Servicebus.JobScheduler.Core.Contracts
         Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null);
         Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
             where T : class, IMessageBase;
-        Task SetupEntitiesIfNotExist();
+        Task SetupEntitiesIfNotExist(IConfiguration config);
     }
 }

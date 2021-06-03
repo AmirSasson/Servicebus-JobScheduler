@@ -168,23 +168,26 @@ namespace Servicebus.JobScheduler.Core.Bus
             });
         }
 
-        public async Task SetupEntitiesIfNotExist()
+        public async Task SetupEntitiesIfNotExist(IConfiguration configuration)
         {
             _logger.LogCritical("Running service bus Setup..");
             var adminClient = new ServiceBusAdministrationClient(_connectionString);
 
             var topicsNames = Enum.GetNames<TTopics>();
 
+            CreateTopicOptions getTopicOptions(string topicName)
+            {
+                var maxSizeInMegabytes = configuration.GetValue<int>($"ServiceBus:TopicsConfig:{topicName}:MaxSizeInMegabytes", 1024);
+                var enablePartitioning = configuration.GetValue<bool>($"ServiceBus:TopicsConfig:{topicName}:EnablePartitioning", false);
+                return new CreateTopicOptions(topicName) { MaxSizeInMegabytes = maxSizeInMegabytes, EnablePartitioning = enablePartitioning };
+            }
+
             foreach (var topicName in topicsNames)
             {
                 bool topicExists = await adminClient.TopicExistsAsync(topicName);
                 if (!topicExists)
                 {
-                    var options = new CreateTopicOptions(topicName)
-                    {
-                        MaxSizeInMegabytes = 1024,
-                        //EnablePartitioning = true,
-                    };
+                    var options = getTopicOptions(topicName);
                     _logger.LogCritical($"creating missing topic {topicName}");
                     await adminClient.CreateTopicAsync(options);
                 }
@@ -196,28 +199,32 @@ namespace Servicebus.JobScheduler.Core.Bus
 
             var subscriptionNames = Enum.GetNames<TSubscription>();
 
+            CreateSubscriptionOptions getSubscriptionOptions(string topicName, string subscriptionName)
+            {
+                var maxImmediateRetriesInBatch = configuration.GetValue<int>($"ServiceBus:SubscriptionConfig:{topicName}:MaxImmediateRetriesInBatch", 5);
+
+                return new CreateSubscriptionOptions(topicName, subscriptionName)
+                {
+                    MaxDeliveryCount = maxImmediateRetriesInBatch,
+                    DefaultMessageTimeToLive = new TimeSpan(2, 0, 0, 0),
+                };
+            }
             foreach (var subscriptionName in subscriptionNames)
             {
-                var topicName = subscriptionName.Split("_").First();
+                var topicName = subscriptionName.Split("_").First();// subscription name should be in the format : <<TOPIC NAME>>_<<SUBSCRIPTION NAME>>
                 bool subscriptionExists = await adminClient.SubscriptionExistsAsync(topicName, subscriptionName);
                 if (!subscriptionExists)
                 {
-                    var options = new CreateSubscriptionOptions(topicName, subscriptionName)
-                    {
-                        DefaultMessageTimeToLive = new TimeSpan(2, 0, 0, 0),
-                        MaxDeliveryCount = 10,
-                    };
+                    var options = getSubscriptionOptions(topicName, subscriptionName);
                     _logger.LogCritical($"creating missing Subscription {topicName}:{subscriptionName}");
                     await adminClient.CreateSubscriptionAsync(options);
 
-                    // rule - only specific to subscriptionName or to all
+                    // rule - only specific to this subscription or to all
                     var rule = await adminClient.GetRuleAsync(topicName, subscriptionName, RuleProperties.DefaultRuleName);
                     rule.Value.Filter = new SqlRuleFilter($"sys.To IS NULL OR sys.To = '{subscriptionName}'");
                     await adminClient.UpdateRuleAsync(topicName, subscriptionName, rule.Value);
-
                 }
             }
-
         }
 
         public async ValueTask DisposeAsync()

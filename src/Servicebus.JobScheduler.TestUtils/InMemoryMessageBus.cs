@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
@@ -66,7 +67,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             }
         }
 
-        public Task SetupEntitiesIfNotExist() => Task.CompletedTask;
+        public Task SetupEntitiesIfNotExist(IConfiguration _) => Task.CompletedTask;
 
         public Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
          where T : class, IMessageBase

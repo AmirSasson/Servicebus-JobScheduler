@@ -128,7 +128,7 @@ namespace Servicebus.JobScheduler.ExampleApp
 
             if (o.SetupServiceBus == true)
             {
-                await bus.SetupEntitiesIfNotExist();
+                await bus.SetupEntitiesIfNotExist(config);
             }
 
             await buildTopicFlowTree(o, loggerFactory, source, bus, db);
