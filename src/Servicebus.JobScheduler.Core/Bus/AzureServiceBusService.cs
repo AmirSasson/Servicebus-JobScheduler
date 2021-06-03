@@ -38,7 +38,7 @@ namespace Servicebus.JobScheduler.Core.Bus
 
         public async Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
         {
-            var topicClient = _clientEntities.GetOrAdd(topic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: topic.ToString())) as TopicClient;
+            var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
 
             Message message = new()
             {
@@ -69,6 +69,7 @@ namespace Servicebus.JobScheduler.Core.Bus
         {
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
+                (_) =>
                  new SubscriptionClient(
                     connectionString: _connectionString,
                     topicPath: topic.ToString(),
@@ -120,15 +121,15 @@ namespace Servicebus.JobScheduler.Core.Bus
 
         private async Task startDeadLetterRetryEngine(TTopics retriesTopic, TSubscription subscription, CancellationTokenSource source, RetryPolicy<TTopics> retry)
         {
-            var dlpath = EntityNameHelper.FormatDeadLetterPath(EntityNameHelper.FormatSubscriptionPath(retriesTopic.ToString(), subscription.ToString()));
+            var dlqPath = EntityNameHelper.FormatDeadLetterPath(EntityNameHelper.FormatSubscriptionPath(retriesTopic.ToString(), subscription.ToString()));
 
-            var deadQueueReceiver = _clientEntities.GetOrAdd(dlpath.ToString(), new MessageReceiver(_connectionString, dlpath)) as MessageReceiver;
+            var deadQueueReceiver = _clientEntities.GetOrAdd(dlqPath.ToString(), (path) => new MessageReceiver(_connectionString, path)) as MessageReceiver;
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
-                var topicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: retriesTopic.ToString())) as TopicClient;
-                var permenantTopicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), new TopicClient(connectionString: _connectionString, entityPath: retry.PermanentErrorsTopic.ToString())) as TopicClient;
+                var topicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
+                var permenantTopicClient = _clientEntities.GetOrAdd(retry.PermanentErrorsTopic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
 
                 while (!source.IsCancellationRequested)
                 {
