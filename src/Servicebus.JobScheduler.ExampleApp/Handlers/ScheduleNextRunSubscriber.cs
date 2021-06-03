@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class ScheduleNextRunSubscriber : IMessageHandler<JobDefinition>
+    public class ScheduleNextRunSubscriber : BaseSimulatorHandler<JobDefinition>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;        
+        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
 
-        public ScheduleNextRunSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleNextRunSubscriber> logger)
+        public ScheduleNextRunSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
+        : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _bus = bus;
             //_scheduleForImmediate = scheduleForImmediate;
@@ -20,7 +21,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger = logger;
         }
 
-        public async Task<bool> Handle(JobDefinition msg)
+        protected override async Task<bool> handlePrivate(JobDefinition msg)
         {
             var shouldScheduleNextWindow = msg.RunInIntervals;
             _logger.LogInformation($"handling JobDefination should reschedule for later: {shouldScheduleNextWindow}");

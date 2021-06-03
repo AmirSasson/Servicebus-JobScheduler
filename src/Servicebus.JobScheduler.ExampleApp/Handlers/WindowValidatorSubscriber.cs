@@ -7,14 +7,15 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class WindowValidatorSubscriber : IMessageHandler<JobWindow>
+    public class WindowValidatorSubscriber : BaseSimulatorHandler<JobWindow>
     {
         private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly IRepository<JobDefinition> _repo;
         private readonly string _runId; // just for test
         private readonly ILogger _logger;
 
-        public WindowValidatorSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowValidatorSubscriber> logger, IRepository<JobDefinition> repo, string runId)
+        public WindowValidatorSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowValidatorSubscriber> logger, IRepository<JobDefinition> repo, string runId, int simulateFailurePercents)
+        : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _bus = bus;
             _repo = repo;
@@ -22,7 +23,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger = logger;
         }
 
-        public async Task<bool> Handle(JobWindow msg)
+        protected override async Task<bool> handlePrivate(JobWindow msg)
         {
             if (msg.RunId != _runId)
             {

@@ -162,8 +162,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                    Topics.JobDefinitionChange,
                    Subscriptions.JobDefinitionChange_ImmediateScheduleRule,
                    concurrencyLevel: 3,
-                   simulateFailurePercents: o.HandlingErrorRate,
-                   new ScheduleNextRunSubscriber(bus, loggerFactory.CreateLogger<ScheduleNextRunSubscriber>()),
+                   new ScheduleNextRunSubscriber(bus, loggerFactory.CreateLogger<ScheduleNextRunSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
                    null,
                    source);
             }
@@ -174,8 +173,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                    Topics.ReadyToRunJobWindow,
                    Subscriptions.ReadyToRunJobWindow_Validation,
                    concurrencyLevel: 3,
-                   simulateFailurePercents: o.HandlingErrorRate,
-                   new WindowValidatorSubscriber(bus, loggerFactory.CreateLogger<WindowValidatorSubscriber>(), db, o.RunId),
+                   new WindowValidatorSubscriber(bus, loggerFactory.CreateLogger<WindowValidatorSubscriber>(), db, o.RunId, simulateFailurePercents: o.HandlingErrorRate),
                    new RetryPolicy<Topics> { PermanentErrorsTopic = Topics.PermanentErrors, RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                    source);
             }
@@ -186,8 +184,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 Topics.JobWindowValid,
                 Subscriptions.JobWindowValid_RuleTimeWindowExecution,
                 concurrencyLevel: 3,
-                simulateFailurePercents: o.HandlingErrorRate,
-                new WindowExecutionSubscriber(bus, loggerFactory.CreateLogger<WindowExecutionSubscriber>(), o.ExecErrorRate),
+                new WindowExecutionSubscriber(bus, loggerFactory.CreateLogger<WindowExecutionSubscriber>(), o.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                 new RetryPolicy<Topics> { PermanentErrorsTopic = Topics.PermanentErrors, RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                 source);
             }
@@ -198,8 +195,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                     Topics.JobWindowValid,
                     Subscriptions.JobWindowValid_ScheduleNextRun,
                     concurrencyLevel: 3,
-                    simulateFailurePercents: o.HandlingErrorRate,
-                    new ScheduleNextRunSubscriber(bus, loggerFactory.CreateLogger<ScheduleNextRunSubscriber>()),
+                    new ScheduleNextRunSubscriber(bus, loggerFactory.CreateLogger<ScheduleNextRunSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
                     null,
                     source);
             }
@@ -210,8 +206,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                    Topics.JobWindowConditionMet,
                    Subscriptions.JobWindowConditionMet_Publish,
                    concurrencyLevel: 1,
-                   simulateFailurePercents: o.HandlingErrorRate,
-                   new PublishSubscriber(loggerFactory.CreateLogger<PublishSubscriber>(), o.RunId),
+                   new PublishSubscriber(loggerFactory.CreateLogger<PublishSubscriber>(), o.RunId, simulateFailurePercents: o.HandlingErrorRate),
                     null,
                    source);
             }
@@ -222,8 +217,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                    Topics.JobWindowConditionMet,
                    Subscriptions.JobWindowConditionMet_Suppress,
                    concurrencyLevel: 1,
-                   simulateFailurePercents: o.HandlingErrorRate,
-                   new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>()),
+                   new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
                    null,
                    source);
             }
@@ -233,8 +227,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                    Topics.JobWindowConditionNotMet,
                    Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay,
                    concurrencyLevel: 3,
-                   simulateFailurePercents: o.HandlingErrorRate,
-                   new ScheduleIngestionDelayExecutionSubscriber(bus, loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>()),
+                   new ScheduleIngestionDelayExecutionSubscriber(bus, loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
                    null,
                    source);
             }

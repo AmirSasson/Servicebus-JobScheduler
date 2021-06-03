@@ -11,7 +11,10 @@
       "preLaunchTask": "build",
       "console": "externalTerminal",
       "program": "${workspaceFolder}/src/Servicebus.JobScheduler.ExampleApp/bin/Debug/net5.0/Servicebus.JobScheduler.ExampleApp.dll",
-      "args": [],
+      "args": [
+        "--execute-error-rate",
+        "50"
+      ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false
     },

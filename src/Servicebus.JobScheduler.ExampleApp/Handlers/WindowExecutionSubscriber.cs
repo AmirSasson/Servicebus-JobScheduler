@@ -7,20 +7,21 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class WindowExecutionSubscriber : IMessageHandler<JobWindow>
+    public class WindowExecutionSubscriber : BaseSimulatorHandler<JobWindow>
     {
         private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
         private readonly int _simulateFailurePercents;
         static int counterDummy;
 
-        public WindowExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents)
+        public WindowExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents, TimeSpan simulateExecutionTime)
+        : base(simulateFailurePercents, simulateExecutionTime, logger)
         {
             _bus = bus;
             _logger = logger;
             _simulateFailurePercents = simulateFailurePercents;
         }
-        public async Task<bool> Handle(JobWindow msg)
+        protected override async Task<bool> handlePrivate(JobWindow msg)
         {
             var result = await runRuleCondition(msg);
 
@@ -38,25 +39,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             return true;
         }
 
-        private async Task<(bool conditionMet, object result)> runRuleCondition(JobWindow msg)
+        private Task<(bool conditionMet, object result)> runRuleCondition(JobWindow msg)
         {
-            var rand = new Random((int)DateTime.Now.Ticks);
-
-            bool shouldSimulateError()
-            {
-                //return counterDummy < 35 && rand.Next(0, 100) <= _simulateFailurePercents;
-                return rand.Next(0, 100) <= _simulateFailurePercents;
-            }
             counterDummy++;
             _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to log analytics for ruleId {msg.Id} call: #{counterDummy}");
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            if (shouldSimulateError())
-            {
-                throw new ApplicationException("Error simulation..");
-            }
             //   if (counterDummy % 2 == 0)
             //   {
-            return (conditionMet: true, result: null);
+            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
             //   }
             //   return (conditionMet: false, result: null);
         }

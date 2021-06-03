@@ -7,19 +7,20 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class ScheduleIngestionDelayExecutionSubscriber : IMessageHandler<JobWindowExecutionContext>
+    public class ScheduleIngestionDelayExecutionSubscriber : BaseSimulatorHandler<JobWindowExecutionContext>
     {
         private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
         const int INGESTION_TOLLERANCE_DELAY_MINUTES = 2;
         readonly TimeSpan _ingestionDelay = TimeSpan.FromMinutes(INGESTION_TOLLERANCE_DELAY_MINUTES);
 
-        public ScheduleIngestionDelayExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleIngestionDelayExecutionSubscriber> logger)
+        public ScheduleIngestionDelayExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleIngestionDelayExecutionSubscriber> logger, int simulateFailurePercents)
+        : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _logger = logger;
             _bus = bus;
         }
-        public async Task<bool> Handle(JobWindowExecutionContext msg)
+        protected override async Task<bool> handlePrivate(JobWindowExecutionContext msg)
         {
             // clone
             var delayedWindow = msg.Clone();

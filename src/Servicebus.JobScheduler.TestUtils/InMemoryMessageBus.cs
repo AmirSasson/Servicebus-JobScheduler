@@ -68,7 +68,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
 
         public Task SetupEntitiesIfNotExist() => Task.CompletedTask;
 
-        public Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, int simulateFailurePercents, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
+        public Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
          where T : class, IMessageBase
         {
             _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");

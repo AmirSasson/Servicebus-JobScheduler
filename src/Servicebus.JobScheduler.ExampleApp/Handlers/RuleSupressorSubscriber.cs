@@ -2,21 +2,22 @@ using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.ExampleApp.Common;
 using Servicebus.JobScheduler.ExampleApp.Messages;
+using System;
 using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class RuleSupressorSubscriber : IMessageHandler<JobOutput>
+    public class RuleSupressorSubscriber : BaseSimulatorHandler<JobOutput>
     {
         private readonly IRepository<JobDefinition> _repo;
         private readonly ILogger _logger;
 
-        public RuleSupressorSubscriber(IRepository<JobDefinition> repo, ILogger<RuleSupressorSubscriber> logger)
+        public RuleSupressorSubscriber(IRepository<JobDefinition> repo, ILogger<RuleSupressorSubscriber> logger, int simulateFailurePercents) : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _repo = repo;
             _logger = logger;
         }
-        public async Task<bool> Handle(JobOutput msg)
+        protected override async Task<bool> handlePrivate(JobOutput msg)
         {
             if (msg.Rule.BehaviorMode == JobDefinition.JobBehaviorMode.DisabledAfterFirstJobOutput)
             {

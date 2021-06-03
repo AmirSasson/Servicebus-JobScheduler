@@ -64,10 +64,9 @@ namespace Servicebus.JobScheduler.Core.Bus
             }
         }
 
-        public async Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, int simulateFailurePercents, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
+        public async Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
             where T : class, IMessageBase
         {
-
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
                  new SubscriptionClient(
@@ -85,12 +84,6 @@ namespace Servicebus.JobScheduler.Core.Bus
                 await startDeadLetterRetryEngine(topic, subscription, source, deadLetterRetrying);//permanentErrorsTopic.Value, new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
-            var rand = new Random((int)DateTime.Now.Ticks);
-
-            bool shouldSimulateError()
-            {
-                return rand.Next(0, 100) <= simulateFailurePercents;
-            }
 
             _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
             subscriptionClient.RegisterMessageHandler(
@@ -100,21 +93,26 @@ namespace Servicebus.JobScheduler.Core.Bus
                     var obj = str.FromJson<T>();
                     if (obj.RunId != _runId)
                     {
-                        // test igmore other runs
+                        // test ignore other runs
                         return;
                     }
 
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handler.GetType().Name}");
 
-                    if (string.IsNullOrEmpty(msg.To) && shouldSimulateError())
-                    {
-                        throw new ApplicationException("Error simulation..");
-                    }
                     await handler.Handle(obj);
 
                     _logger.LogInformation($"[{handler.GetType().Name}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
                 },
-                new MessageHandlerOptions(args => { _logger.LogCritical(args.Exception, "Error"); return Task.CompletedTask; }) { AutoComplete = true, MaxConcurrentCalls = concurrencyLevel }
+                new MessageHandlerOptions(
+                    args =>
+                    {
+                        _logger.LogCritical(args.Exception, "Error");
+                        return Task.CompletedTask;
+                    })
+                {
+                    AutoComplete = true,
+                    MaxConcurrentCalls = concurrencyLevel
+                }
             );
 
             return true;
