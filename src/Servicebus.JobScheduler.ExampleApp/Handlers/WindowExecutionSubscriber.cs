@@ -42,7 +42,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         private Task<(bool conditionMet, object result)> runRuleCondition(JobWindow msg)
         {
             counterDummy++;
-            _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to log analytics for ruleId {msg.Id} call: #{counterDummy}");
+            _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.RuleId} call: #{counterDummy}");
             //   if (counterDummy % 2 == 0)
             //   {
             return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
