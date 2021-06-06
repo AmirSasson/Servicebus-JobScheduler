@@ -15,7 +15,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         {
             _logger = logger;
             _runId = runId;
-            File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { "JobId,DateTime,WindowId,Id" });
+            if (!File.Exists($"Joboutputs.{_runId}.csv"))
+            {
+                // write csv headers
+                File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { "JobId,DateTime,WindowId,Id" });
+            }
         }
         protected override Task<bool> handlePrivate(JobOutput msg)
         {
