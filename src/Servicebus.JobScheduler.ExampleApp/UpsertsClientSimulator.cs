@@ -21,11 +21,12 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 {
                     Id = id.ToString(),
                     Name = $"TestRule {id}",
-                    IntervalSeconds = (int)ruleInterval.TotalSeconds,
+                    WindowTimeRangeSeconds = (int)ruleInterval.TotalSeconds,
+                    CronSchedulingExpression = "*/5 * * * *",
                     RuleId = id.ToString(),
                     RunId = runId,
                     LastRunWindowUpperBound = DateTime.UtcNow.Subtract(ruleInterval), // so immediate schedule will run on current window
-                    ChangeTime = DateTime.UtcNow,
+                    JobDefinitionChangeTime = DateTime.UtcNow,
                     SkipValidation = true,
                     RunInIntervals = true,
                     //BehaviorMode = JobDefination.RuleBehaviorMode.DisabledAfterFirstJobOutput,

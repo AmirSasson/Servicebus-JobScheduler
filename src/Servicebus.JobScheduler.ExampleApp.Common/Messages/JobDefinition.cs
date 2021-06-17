@@ -8,10 +8,16 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
     {
         public string Id { get; set; }
         public string Name { get; set; }
-        public int IntervalSeconds { get; set; }
+        public int WindowTimeRangeSeconds { get; set; }
         [JsonIgnore]
-        public TimeSpan Interval => TimeSpan.FromSeconds(IntervalSeconds);
+        public TimeSpan WindowTimeRange => TimeSpan.FromSeconds(WindowTimeRangeSeconds);
 
+        /// <summary>
+        /// Cron expression, setting this property, will override the interval params.
+        /// <br/>on first run, will run from now till nearest next schedule time
+        /// <code>examples */5 * * * *</code>
+        /// </summary>
+        public string CronSchedulingExpression { get; set; }
         public bool RunInIntervals { get; set; }
         public string RuleId { get; set; }
         public string Etag { get; set; }
@@ -21,7 +27,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         /// <summary>
         /// this is just for testing
         /// </summary>
-        public DateTime ChangeTime { get; set; }
+        public DateTime JobDefinitionChangeTime { get; set; }
 
         public JobStatus Status { get; set; }
         public JobBehaviorMode BehaviorMode { get; set; }

@@ -42,26 +42,31 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         private async Task publishWindowReady(JobDefinition msg, TimeSpan? executionDelay = null, bool runInIntervals = true)
         {
             var nextWindowFromTime = msg.LastRunWindowUpperBound;
-            var nextWindowToTime = msg.LastRunWindowUpperBound.Add(msg.Interval);
+            var nextWindowToTime = msg.LastRunWindowUpperBound.Add(msg.WindowTimeRange);
+
+            if (!string.IsNullOrEmpty(msg.CronSchedulingExpression))
+            {
+                nextWindowToTime = NCrontab.CrontabSchedule.Parse(msg.CronSchedulingExpression).GetNextOccurrence(msg.LastRunWindowUpperBound);
+            }
 
             var window = new JobWindow //TODO: Auto mapper
             {
                 Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
-                IntervalSeconds = msg.IntervalSeconds,
+                WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
                 Name = "",
                 RuleId = msg.RuleId,
+                CronSchedulingExpression = msg.CronSchedulingExpression,
                 FromTime = nextWindowFromTime,
                 ToTime = nextWindowToTime,
                 RunInIntervals = runInIntervals,
                 Etag = msg.Etag,
                 RunId = msg.RunId,
                 LastRunWindowUpperBound = nextWindowToTime,
-                ChangeTime = msg.ChangeTime,
+                JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
                 Status = msg.Status,
                 BehaviorMode = msg.BehaviorMode,
                 SkipValidation = false
             };
-
             await _bus.PublishAsync(window, Topics.ReadyToRunJobWindow, window.ToTime.Add(executionDelay ?? TimeSpan.Zero));
         }
     }
