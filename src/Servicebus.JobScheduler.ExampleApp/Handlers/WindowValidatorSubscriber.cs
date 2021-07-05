@@ -31,7 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 return false;
             }
 
-            if (msg.Interval <= TimeSpan.Zero)
+            if (msg.WindowTimeRange <= TimeSpan.Zero)
             {
                 _logger.LogCritical("Invalid Interval for rule!");
                 return false;

@@ -13,7 +13,9 @@
       "program": "${workspaceFolder}/src/Servicebus.JobScheduler.ExampleApp/bin/Debug/net5.0/Servicebus.JobScheduler.ExampleApp.dll",
       "args": [
         "--execute-error-rate",
-        "50"
+        "50",
+        "-r",
+        "200"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false
