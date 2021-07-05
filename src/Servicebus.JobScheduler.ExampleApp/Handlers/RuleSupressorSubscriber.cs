@@ -25,7 +25,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 if (rule.BehaviorMode == JobDefinition.JobBehaviorMode.DisabledAfterFirstJobOutput)
                 {
                     _logger.LogInformation($"Supressing Rule {msg.RuleId}");
-                    rule.Status = JobDefinition.JobStatus.Disabled;
+                    rule.Status = JobStatus.Disabled;
                     await _repo.Upsert(rule);
                 }
             }

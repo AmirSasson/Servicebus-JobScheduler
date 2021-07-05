@@ -36,7 +36,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 _logger.LogCritical("Invalid Interval for rule!");
                 return false;
             }
-            if (msg.SkipValidation)
+            if (msg.SkipNextWindowValidation)
             {
                 await _bus.PublishAsync(msg, Topics.JobWindowValid);
             }

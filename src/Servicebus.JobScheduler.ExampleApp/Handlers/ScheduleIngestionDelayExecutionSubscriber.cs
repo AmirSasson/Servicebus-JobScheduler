@@ -24,14 +24,14 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         {
             // clone
             var delayedWindow = msg.Clone();
-            delayedWindow.RunInIntervals = false;
-            delayedWindow.SkipValidation = true;
+            delayedWindow.Schedule.PeriodicJob = false;
+            delayedWindow.SkipNextWindowValidation = true;
             var delayedIngestionExecutionTime = msg.ToTime.Add(_ingestionDelay);
             if (msg.WindowExecutionTime >= delayedIngestionExecutionTime)
             {
                 _logger.LogWarning($"No need to schedule delayed execution cause the window already executed late! WindowExecutionTime: {msg.WindowExecutionTime}, delayedIngestionExecutionTime: {delayedIngestionExecutionTime}");
             }
-            else if (msg.RunInIntervals)
+            else if (msg.Schedule.PeriodicJob)
             {
                 await _bus.PublishAsync(delayedWindow, Topics.ReadyToRunJobWindow, DateTime.UtcNow.Add(_ingestionDelay));
             }

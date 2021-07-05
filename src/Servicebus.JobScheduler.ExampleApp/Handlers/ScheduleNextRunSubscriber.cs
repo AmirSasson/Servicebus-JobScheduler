@@ -15,16 +15,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _bus = bus;
-            //_scheduleForImmediate = scheduleForImmediate;
-            //_repo = repo;
-            //_runId = runId;
             _logger = logger;
         }
 
         protected override async Task<bool> handlePrivate(JobDefinition msg)
         {
-            var shouldScheduleNextWindow = msg.RunInIntervals;
-            _logger.LogInformation($"handling JobDefination should reschedule for later: {shouldScheduleNextWindow}");
+            var shouldScheduleNextWindow = msg.Schedule.PeriodicJob;
+            _logger.LogInformation($"handling JobDefinition should reschedule for later: {shouldScheduleNextWindow}");
             if (shouldScheduleNextWindow)
             {
                 await publishWindowReady(msg);
@@ -39,35 +36,33 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         /// <param name="executionDelay">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <param name="runInIntervals">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <returns></returns>
-        private async Task publishWindowReady(JobDefinition msg, TimeSpan? executionDelay = null, bool runInIntervals = true)
+        private async Task publishWindowReady(JobDefinition msg, bool runInIntervals = true)
         {
             var nextWindowFromTime = msg.LastRunWindowUpperBound;
-            var nextWindowToTime = msg.LastRunWindowUpperBound.Add(msg.WindowTimeRange);
+            DateTime? nextWindowToTime = msg.Schedule.GetNextScheduleUpperBoundTime(msg.LastRunWindowUpperBound);
 
-            if (!string.IsNullOrEmpty(msg.CronSchedulingExpression))
+            if (nextWindowToTime.HasValue)
             {
-                nextWindowToTime = NCrontab.CrontabSchedule.Parse(msg.CronSchedulingExpression).GetNextOccurrence(msg.LastRunWindowUpperBound);
+                var window = new JobWindow //TODO: Auto mapper
+                {
+                    Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
+                    WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
+                    Name = "",
+                    RuleId = msg.RuleId,
+                    Schedule = msg.Schedule,
+                    FromTime = nextWindowFromTime,
+                    ToTime = nextWindowToTime.Value,
+                    Etag = msg.Etag,
+                    RunId = msg.RunId,
+                    LastRunWindowUpperBound = nextWindowToTime.Value,
+                    JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
+                    Status = msg.Status,
+                    BehaviorMode = msg.BehaviorMode,
+                    SkipNextWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
+                };
+                var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
+                await _bus.PublishAsync(window, Topics.ReadyToRunJobWindow, window.ToTime.Add(executionDelay));
             }
-
-            var window = new JobWindow //TODO: Auto mapper
-            {
-                Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
-                WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
-                Name = "",
-                RuleId = msg.RuleId,
-                CronSchedulingExpression = msg.CronSchedulingExpression,
-                FromTime = nextWindowFromTime,
-                ToTime = nextWindowToTime,
-                RunInIntervals = runInIntervals,
-                Etag = msg.Etag,
-                RunId = msg.RunId,
-                LastRunWindowUpperBound = nextWindowToTime,
-                JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
-                Status = msg.Status,
-                BehaviorMode = msg.BehaviorMode,
-                SkipValidation = false
-            };
-            await _bus.PublishAsync(window, Topics.ReadyToRunJobWindow, window.ToTime.Add(executionDelay ?? TimeSpan.Zero));
         }
     }
 }

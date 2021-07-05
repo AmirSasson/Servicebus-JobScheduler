@@ -22,16 +22,16 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     Id = id.ToString(),
                     Name = $"TestRule {id}",
                     WindowTimeRangeSeconds = (int)ruleInterval.TotalSeconds,
-                    CronSchedulingExpression = "*/5 * * * *",
+                    //Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = (int)ruleInterval.TotalSeconds },
+                    Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/5 * * * *" },
                     RuleId = id.ToString(),
                     RunId = runId,
                     LastRunWindowUpperBound = DateTime.UtcNow.Subtract(ruleInterval), // so immediate schedule will run on current window
                     JobDefinitionChangeTime = DateTime.UtcNow,
-                    SkipValidation = true,
-                    RunInIntervals = true,
+                    SkipNextWindowValidation = true,
                     //BehaviorMode = JobDefination.RuleBehaviorMode.DisabledAfterFirstJobOutput,
                     BehaviorMode = JobDefinition.JobBehaviorMode.Simple,
-                    Status = JobDefinition.JobStatus.Enabled
+                    Status = JobStatus.Enabled
                 };
                 logger.LogInformation($"****************************");
                 logger.LogCritical($"TEST - Upserting Rule {rule.RuleId}");

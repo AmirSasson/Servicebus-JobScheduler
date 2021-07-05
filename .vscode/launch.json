@@ -15,7 +15,7 @@
         "--execute-error-rate",
         "50",
         "-r",
-        "200"
+        "300"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false
