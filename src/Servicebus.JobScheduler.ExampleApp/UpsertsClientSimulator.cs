@@ -28,7 +28,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     RunId = runId,
                     LastRunWindowUpperBound = DateTime.UtcNow.Subtract(ruleInterval), // so immediate schedule will run on current window
                     JobDefinitionChangeTime = DateTime.UtcNow,
-                    SkipWindowValidation = true,
+                    SkipNextWindowValidation = true,
                     //BehaviorMode = JobDefination.RuleBehaviorMode.DisabledAfterFirstJobOutput,
                     BehaviorMode = JobDefinition.JobBehaviorMode.Simple,
                     Status = JobStatus.Enabled

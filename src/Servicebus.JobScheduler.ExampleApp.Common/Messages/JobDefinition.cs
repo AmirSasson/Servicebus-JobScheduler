@@ -27,7 +27,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         public bool PeriodicJob { get; set; }
 
         /// <summary>
-        /// When Set, After this date, no more schedules and this Job wont be scheduled anymore 
+        /// When Set, After this date, no more schedules and this Job wont be scheduled anymore
         /// </summary>
         public DateTime? ScheduleEndTime { get; set; }
 
@@ -36,6 +36,9 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         /// </summary>
         public bool ForceSuppressWindowValidation { get; set; }
 
+        /// <summary>
+        /// returns next Scheduletime based on previous window Upper Bound
+        /// </summary>
         public DateTime? GetNextScheduleUpperBoundTime(DateTime previousRunUpperBound)
         {
             var nextWindowToTime = previousRunUpperBound.Add(TimeSpan.FromSeconds(this.RunIntervalSeconds));
@@ -72,7 +75,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
 
         public JobStatus Status { get; set; }
         public JobBehaviorMode BehaviorMode { get; set; }
-        public bool SkipWindowValidation { get; set; }
+        public bool SkipNextWindowValidation { get; set; }
 
         public enum JobBehaviorMode
         {

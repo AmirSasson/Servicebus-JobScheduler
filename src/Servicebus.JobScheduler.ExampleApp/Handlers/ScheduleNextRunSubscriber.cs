@@ -58,7 +58,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                     JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
                     Status = msg.Status,
                     BehaviorMode = msg.BehaviorMode,
-                    SkipWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
+                    SkipNextWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
                 };
                 var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
                 await _bus.PublishAsync(window, Topics.ReadyToRunJobWindow, window.ToTime.Add(executionDelay));

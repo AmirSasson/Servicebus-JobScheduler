@@ -25,7 +25,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             // clone
             var delayedWindow = msg.Clone();
             delayedWindow.Schedule.PeriodicJob = false;
-            delayedWindow.SkipWindowValidation = true;
+            delayedWindow.SkipNextWindowValidation = true;
             var delayedIngestionExecutionTime = msg.ToTime.Add(_ingestionDelay);
             if (msg.WindowExecutionTime >= delayedIngestionExecutionTime)
             {
