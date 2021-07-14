@@ -34,7 +34,7 @@ see TopicsFlow.vsdx visio file for logical flow
 ```
 - for using azure ServiceBus, add `appsettings.overrides.json` under `src/Servicebus.JobScheduler.ExampleApp` <u>next to</u> existing`appsettings.json` with content:
 
-```
+```json
 {
   "ServiceBus": {
     "ConnectionString": "<<YOUR AZURE SERVICE BUS CONNECTION STRING>>"
