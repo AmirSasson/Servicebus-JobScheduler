@@ -20,7 +20,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger = logger;
             _bus = bus;
         }
-        protected override async Task<bool> handlePrivate(JobWindowExecutionContext msg)
+        protected override Task<HandlerResponse<Topics>> handlePrivate(JobWindowExecutionContext msg)
         {
             // clone
             var delayedWindow = msg.Clone();
@@ -33,10 +33,10 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             }
             else if (msg.Schedule.PeriodicJob)
             {
-                await _bus.PublishAsync(delayedWindow, Topics.ReadyToRunJobWindow, DateTime.UtcNow.Add(_ingestionDelay));
+                return new HandlerResponse<Topics> { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse<Topics>.ContinueWith { Message = delayedWindow, TopicToPublish = Topics.ReadyToRunJobWindow, ExecuteOnUtc = DateTime.UtcNow.Add(_ingestionDelay) } }.AsTask();
             }
 
-            return true;
+            return HandlerResponse<Topics>.FinalOkAsTask;
         }
     }
 }

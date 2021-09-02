@@ -17,7 +17,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _repo = repo;
             _logger = logger;
         }
-        protected override async Task<bool> handlePrivate(JobOutput msg)
+        protected override async Task<HandlerResponse<Topics>> handlePrivate(JobOutput msg)
         {
             if (msg.Rule.BehaviorMode == JobDefinition.JobBehaviorMode.DisabledAfterFirstJobOutput)
             {
@@ -29,7 +29,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                     await _repo.Upsert(rule);
                 }
             }
-            return true;
+            return HandlerResponse<Topics>.FinalOk;
         }
     }
 }

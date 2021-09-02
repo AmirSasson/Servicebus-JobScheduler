@@ -64,8 +64,8 @@ namespace Servicebus.JobScheduler.Core.Bus
             }
         }
 
-        public async Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-            where T : class, IMessageBase
+        public async Task<bool> RegisterSubscriber<TMessage>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMessage> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
+            where TMessage : class, IMessageBase
         {
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
@@ -91,7 +91,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 async (msg, cancel) =>
                 {
                     var str = Encoding.UTF8.GetString(msg.Body);
-                    var obj = str.FromJson<T>();
+                    var obj = str.FromJson<TMessage>();
                     if (obj.RunId != _runId)
                     {
                         // test ignore other runs
@@ -100,7 +100,11 @@ namespace Servicebus.JobScheduler.Core.Bus
 
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handler.GetType().Name}");
 
-                    await handler.Handle(obj);
+                    var handlerResponse = await handler.Handle(obj);
+                    if (handlerResponse.ContinueWithResult != null)
+                    {
+                        await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc);
+                    }
 
                     _logger.LogInformation($"[{handler.GetType().Name}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
                 },
@@ -117,6 +121,11 @@ namespace Servicebus.JobScheduler.Core.Bus
             );
 
             return true;
+        }
+
+        private void PublishAsync(IMessageBase message, TTopics topicToPublish, object executeOnUtc)
+        {
+            throw new NotImplementedException();
         }
 
         private async Task startDeadLetterRetryEngine(TTopics retriesTopic, TSubscription subscription, CancellationTokenSource source, RetryPolicy<TTopics> retry)
