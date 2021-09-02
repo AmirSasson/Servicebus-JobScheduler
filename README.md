@@ -6,6 +6,14 @@ using Publish Subscribe, the console application when starting, registers subscr
 Each handler, processes the message and publishes to next topic if needed.
 To initiate the process, the Tester Client simulates JobDefinition Upserts.
 see TopicsFlow.vsdx visio file for logical flow
+##### Job Scheduler capabilties:
+- enables scheduling by time interval
+- enables scheduling by [cron](https://crontab.cronhub.io/) expressions
+- immediate retries on errors
+- [exponential backoff](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/implement-retries-exponential-backoff#:~:text=Retries%20with%20exponential%20backoff%20is%20a%20technique%20that,more%20than%20a%20few%20seconds%20for%20any%20reason.) retries by config
+- dead letter queueing for zero data loss + transparency
+- enables [azure service bus partitioning](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-partitioning) for **high scale** by config
+- enables ad-hoc job runs for manual/recovery scenarios
 ##### Simulator capabilties:
 - flexabilty to run as single process, or process that regsieters one or more handlers
 - simuate errors (for the POC)
@@ -27,7 +35,7 @@ see TopicsFlow.vsdx visio file for logical flow
 ```
 - for using azure ServiceBus, add `appsettings.overrides.json` under `src/Servicebus.JobScheduler.ExampleApp` <u>next to</u> existing`appsettings.json` with content:
 
-```
+```json
 {
   "ServiceBus": {
     "ConnectionString": "<<YOUR AZURE SERVICE BUS CONNECTION STRING>>"
