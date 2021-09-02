@@ -23,6 +23,24 @@
       "stopAtEntry": false
     },
     {
+      "name": ".NET Core Launch (console) Local Bus",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "console": "externalTerminal",
+      "program": "${workspaceFolder}/src/Servicebus.JobScheduler.ExampleApp/bin/Debug/net5.0/Servicebus.JobScheduler.ExampleApp.dll",
+      "args": [
+        "--execute-error-rate",
+        "50",
+        "-r",
+        "800",
+        "-l",
+        "true"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false
+    },
+    {
       "name": ".NET Core Attach",
       "type": "coreclr",
       "request": "attach"

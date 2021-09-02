@@ -31,7 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             _logger = logger;
         }
 
-        public Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
         {
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
@@ -44,9 +44,8 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             }
             else
             {
-                publishToSubscribers(msg, topic);
+                await publishToSubscribers(msg, topic);
             }
-            return Task.CompletedTask;
         }
 
         private async Task publishToSubscribers(IMessageBase msg, TTopics topic)
@@ -76,7 +75,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                                 if (result.ContinueWithResult != null)
                                 {
                                     // dont wait
-                                    PublishAsync(result.ContinueWithResult.Message, result.ContinueWithResult.TopicToPublish, result.ContinueWithResult.ExecuteOnUtc);
+                                    await PublishAsync(result.ContinueWithResult.Message, result.ContinueWithResult.TopicToPublish, result.ContinueWithResult.ExecuteOnUtc);
                                 }
                                 else
                                 {
@@ -87,7 +86,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                             catch (System.Exception e)
                             {
                                 retries++;
-                                _logger.LogWarning($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
+                                _logger.LogError($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
                             }
                         }
                     };
