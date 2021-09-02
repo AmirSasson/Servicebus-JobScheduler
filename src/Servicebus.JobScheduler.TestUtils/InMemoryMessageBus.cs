@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
+using Servicebus.JobScheduler.Core.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,6 +18,10 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             public string Id => "1";
 
             public string RunId => "1";
+        }
+
+        enum DummyTopic
+        {
         }
         readonly Dictionary<TSubscription, IList> _eventHandlers = new();
         private readonly ILogger _logger;
@@ -44,7 +49,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             return Task.CompletedTask;
         }
 
-        private void publishToSubscribers(IMessageBase msg, TTopics topic)
+        private async Task publishToSubscribers(IMessageBase msg, TTopics topic)
         {
             foreach (var eventHandlersKvp in _eventHandlers)
             {
@@ -54,14 +59,37 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     {
                         _logger.LogInformation($"Incoming {topic}:{eventHandlersKvp.Key}/{msg.Id} [{msg.GetType().Name}] delegate to {h.GetType().Name}");
 
-                        var handleMethod = h.GetType().GetMethod(nameof(IMessageHandler<DummyMessage>.Handle));
-                        var task = handleMethod.Invoke(h, new[] { msg });
+                        var handleMethod = h.GetType().GetMethod(nameof(IMessageHandler<DummyTopic, DummyMessage>.Handle));
 
-                        (task as Task)?.ContinueWith((res) =>
+                        var retries = 0;
+                        var success = false;
+                        while (!success && retries < 10)
                         {
-                            _logger.LogInformation($"[{h.GetType().Name}] - [{msg.Id}] receivedMsgCount: Handled success ");
+                            try
+                            {
+                                var task = handleMethod.Invoke(h, new[] { msg });
+                                var handlerResult = (task as Task<HandlerResponse<TTopics>>);
+                                var result = await handlerResult;
+                                success = true;
+                                _logger.LogInformation($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
 
-                        });
+                                if (result.ContinueWithResult != null)
+                                {
+                                    // dont wait
+                                    PublishAsync(result.ContinueWithResult.Message, result.ContinueWithResult.TopicToPublish, result.ContinueWithResult.ExecuteOnUtc);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Got to its final stage!! ");
+
+                                }
+                            }
+                            catch (System.Exception e)
+                            {
+                                retries++;
+                                _logger.LogWarning($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
+                            }
+                        }
                     };
                 }
             }
@@ -69,14 +97,14 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
 
         public Task SetupEntitiesIfNotExist(IConfiguration _) => Task.CompletedTask;
 
-        public Task<bool> RegisterSubscriber<T>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<T> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-         where T : class, IMessageBase
+        public Task<bool> RegisterSubscriber<TMsg>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMsg> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
+         where TMsg : class, IMessageBase
         {
             _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
 
             if (!_eventHandlers.TryGetValue(subscription, out var subs))
             {
-                subs = new List<IMessageHandler<T>>();
+                subs = new List<IMessageHandler<TTopics, TMsg>>();
             }
             subs.Add(handler);
             _eventHandlers[subscription] = subs;

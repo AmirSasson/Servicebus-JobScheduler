@@ -21,22 +21,39 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger = logger;
             _simulateFailurePercents = simulateFailurePercents;
         }
-        protected override async Task<bool> handlePrivate(JobWindow msg)
+        protected override async Task<HandlerResponse<Topics>> handlePrivate(JobWindow msg)
         {
             var result = await runRuleCondition(msg);
-
+            HandlerResponse<Topics> handlerResult;
             if (result.conditionMet)
             {
-                await _bus.PublishAsync(new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", WindowId = msg.Id, RuleId = msg.RuleId, RunId = msg.RunId, Rule = msg }, Topics.JobWindowConditionMet);
+                handlerResult = new HandlerResponse<Topics>
+                {
+                    ResultStatusCode = 200,
+                    ContinueWithResult = new HandlerResponse<Topics>.ContinueWith
+                    {
+                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", WindowId = msg.Id, RuleId = msg.RuleId, RunId = msg.RunId, Rule = msg },
+                        TopicToPublish = Topics.JobWindowConditionMet
+                    }
+                };
             }
             else
             {
                 var execContext = msg.ToJson().FromJson<JobWindowExecutionContext>();
                 execContext.WindowExecutionTime = DateTime.UtcNow;
-                await _bus.PublishAsync(execContext, Topics.JobWindowConditionNotMet);
+
+                handlerResult = new HandlerResponse<Topics>
+                {
+                    ResultStatusCode = 200,
+                    ContinueWithResult = new HandlerResponse<Topics>.ContinueWith
+                    {
+                        Message = execContext,
+                        TopicToPublish = Topics.JobWindowConditionNotMet
+                    }
+                };
             }
 
-            return true;
+            return handlerResult;
         }
 
         private Task<(bool conditionMet, object result)> runRuleCondition(JobWindow msg)
