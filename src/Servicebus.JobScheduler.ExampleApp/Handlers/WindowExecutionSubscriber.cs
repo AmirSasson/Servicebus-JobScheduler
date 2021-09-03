@@ -14,10 +14,9 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         private readonly int _simulateFailurePercents;
         static int counterDummy;
 
-        public WindowExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents, TimeSpan simulateExecutionTime)
+        public WindowExecutionSubscriber(ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents, TimeSpan simulateExecutionTime)
         : base(simulateFailurePercents, simulateExecutionTime, logger)
         {
-            _bus = bus;
             _logger = logger;
             _simulateFailurePercents = simulateFailurePercents;
         }

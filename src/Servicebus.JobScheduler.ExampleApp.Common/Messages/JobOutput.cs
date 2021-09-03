@@ -2,7 +2,7 @@ using Servicebus.JobScheduler.Core.Contracts.Messages;
 
 namespace Servicebus.JobScheduler.ExampleApp.Messages
 {
-    public class JobOutput : IMessageBase
+    public class JobOutput : BaseMessage
     {
         public string Id { get; set; }
         public string Name { get; set; }

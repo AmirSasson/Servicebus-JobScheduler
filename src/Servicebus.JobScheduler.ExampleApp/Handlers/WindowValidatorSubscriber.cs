@@ -9,15 +9,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
     public class WindowValidatorSubscriber : BaseSimulatorHandler<JobWindow>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly IRepository<JobDefinition> _repo;
         private readonly string _runId; // just for test
         private readonly ILogger _logger;
 
-        public WindowValidatorSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowValidatorSubscriber> logger, IRepository<JobDefinition> repo, string runId, int simulateFailurePercents)
+        public WindowValidatorSubscriber(ILogger<WindowValidatorSubscriber> logger, IRepository<JobDefinition> repo, string runId, int simulateFailurePercents)
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
-            _bus = bus;
             _repo = repo;
             _runId = runId;
             _logger = logger;

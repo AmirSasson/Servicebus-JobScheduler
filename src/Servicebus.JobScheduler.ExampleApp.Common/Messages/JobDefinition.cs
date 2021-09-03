@@ -22,7 +22,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         public int? RunDelayUponDueTimeSeconds { get; set; }
 
         /// <summary>
-        /// is this job should run periodically (cron/every X seconds)
+        /// is true, the job would run periodically (cron/every X seconds), if false the job would run one time.
         /// </summary>
         public bool PeriodicJob { get; set; }
 
@@ -54,7 +54,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
             return null;
         }
     }
-    public class JobDefinition : IMessageBase
+    public class JobDefinition : BaseMessage
     {
         public string Id { get; set; }
         public string Name { get; set; }

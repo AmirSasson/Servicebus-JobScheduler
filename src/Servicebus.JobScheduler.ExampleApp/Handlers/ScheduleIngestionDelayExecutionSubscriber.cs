@@ -9,16 +9,14 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
     public class ScheduleIngestionDelayExecutionSubscriber : BaseSimulatorHandler<JobWindowExecutionContext>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
         const int INGESTION_TOLLERANCE_DELAY_MINUTES = 2;
         readonly TimeSpan _ingestionDelay = TimeSpan.FromMinutes(INGESTION_TOLLERANCE_DELAY_MINUTES);
 
-        public ScheduleIngestionDelayExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleIngestionDelayExecutionSubscriber> logger, int simulateFailurePercents)
+        public ScheduleIngestionDelayExecutionSubscriber(ILogger<ScheduleIngestionDelayExecutionSubscriber> logger, int simulateFailurePercents)
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _logger = logger;
-            _bus = bus;
         }
         protected override Task<HandlerResponse<Topics>> handlePrivate(JobWindowExecutionContext msg)
         {

@@ -8,13 +8,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
     public class ScheduleNextRunSubscriber : BaseSimulatorHandler<JobDefinition>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
 
-        public ScheduleNextRunSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
+        public ScheduleNextRunSubscriber(ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
-            _bus = bus;
             _logger = logger;
         }
 

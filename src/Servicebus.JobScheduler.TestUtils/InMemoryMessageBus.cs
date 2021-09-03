@@ -13,7 +13,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
 {
     public class InMemoryMessageBus<TTopics, TSubscription> : IMessageBus<TTopics, TSubscription> where TTopics : struct, Enum where TSubscription : struct, Enum
     {
-        class DummyMessage : IMessageBase
+        class DummyMessage : BaseMessage
         {
             public string Id => "1";
 
@@ -31,7 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             _logger = logger;
         }
 
-        public async Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null)
         {
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
@@ -40,7 +40,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             if (executeOnUtc.HasValue)
             {
                 int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
-                var _ = new Timer((m) => { publishToSubscribers(m as IMessageBase, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
+                var _ = new Timer((m) => { publishToSubscribers(m as BaseMessage, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
             }
             else
             {
@@ -48,7 +48,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             }
         }
 
-        private async Task publishToSubscribers(IMessageBase msg, TTopics topic)
+        private async Task publishToSubscribers(BaseMessage msg, TTopics topic)
         {
             foreach (var eventHandlersKvp in _eventHandlers)
             {
@@ -97,7 +97,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
         public Task SetupEntitiesIfNotExist(IConfiguration _) => Task.CompletedTask;
 
         public Task<bool> RegisterSubscriber<TMsg>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMsg> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-         where TMsg : class, IMessageBase
+         where TMsg : class, IBaseMessage
         {
             _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
 
