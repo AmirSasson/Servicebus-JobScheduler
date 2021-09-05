@@ -6,6 +6,8 @@ using Servicebus.JobScheduler.Core.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,15 +38,31 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
             _logger.LogInformation($"Publishing to {topic} MessageId: {msg.Id} Time to Execute: {scheduledEnqueueTimeUtcDescription}");
+            try
+            {
+                var testSerializationNotFailing = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType()));
+                var str = Encoding.UTF8.GetString(testSerializationNotFailing);
+                var msgAfterSerializing = JsonSerializer.Deserialize(str, msg.GetType());
+                if (string.IsNullOrWhiteSpace((msgAfterSerializing as BaseMessage).Id))
+                {
 
-            if (executeOnUtc.HasValue)
-            {
-                int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
-                var _ = new Timer((m) => { publishToSubscribers(m as BaseMessage, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
+                    throw new ArgumentException("Message Id cannot be null or empty");
+                }
+
+                if (executeOnUtc.HasValue)
+                {
+                    int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
+                    var _ = new Timer((m) => { publishToSubscribers(m as BaseMessage, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
+                }
+                else
+                {
+                    await publishToSubscribers(msg, topic);
+                }
             }
-            else
+            catch (Exception e)
             {
-                await publishToSubscribers(msg, topic);
+                _logger.LogCritical(e, e.Message);
+                throw;
             }
         }
 

@@ -39,20 +39,20 @@ namespace Servicebus.JobScheduler.Core.Bus
         public async Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null)
         {
             var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
-
-            Message message = new()
-            {
-                MessageId = msg.Id,
-                ContentType = "application/json",
-                Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType())),
-                PartitionKey = msg.Id
-            };
-            if (executeOnUtc.HasValue)
-            {
-                message.ScheduledEnqueueTimeUtc = executeOnUtc.Value;
-            }
             try
             {
+                Message message = new()
+                {
+                    MessageId = msg.Id,
+                    ContentType = "application/json",
+                    Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType())),
+                    PartitionKey = msg.Id
+                };
+                if (executeOnUtc.HasValue)
+                {
+                    message.ScheduledEnqueueTimeUtc = executeOnUtc.Value;
+                }
+
                 var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
                 _logger.LogInformation($"Publishing to {topic} MessageId: {msg.Id} Time to Execute: {scheduledEnqueueTimeUtcDescription}");
                 await topicClient.SendAsync(message);
