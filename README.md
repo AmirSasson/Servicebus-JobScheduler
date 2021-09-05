@@ -100,7 +100,6 @@ jobs can be scheduled in 3 different methods:
         Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" ,RunIntervalSeconds = 3600},                  
       ....      
     }
-
   ```   
      
   3. **adhoc runs of a predfeined time window**  

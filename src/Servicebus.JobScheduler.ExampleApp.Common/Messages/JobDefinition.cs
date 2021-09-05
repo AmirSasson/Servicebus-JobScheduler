@@ -80,11 +80,9 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
     }
     public class JobDefinition : BaseMessage
     {
-        public string Id { get; set; }
         public string Name { get; set; }
         public string RuleId { get; set; }
         public string Etag { get; set; }
-        public string RunId { get; set; }
         /// <summary>
         /// last run Window upper time bound
         /// </summary>

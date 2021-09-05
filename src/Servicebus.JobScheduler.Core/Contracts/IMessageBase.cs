@@ -2,8 +2,8 @@ namespace Servicebus.JobScheduler.Core.Contracts.Messages
 {
     public class BaseMessage : IBaseMessage
     {
-        public string Id { get; }
-        public string RunId { get; }
+        public string Id { get; set; }
+        public string RunId { get; set; }
     }
 
     public interface IBaseMessage
