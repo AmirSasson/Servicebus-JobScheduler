@@ -69,8 +69,8 @@ currently this app is running as a linux container on [AKS](https://docs.microso
 jobs can be scheduled in 3 different methods:
   1. **Time Interval sliding window** - occurs every X seconds from the actual schduling time.  
      in the below example, lets assume it was called on time `10:30:10`
-     so the first job window will start immediately `(10:30:10)` and its time range would be `10:27:10 <-> 10:30:10` (range of 180 seconds)  
-     second job would start on `10:32:10` and its time range would be `10:29:10 <-> 10:32:10` (after 120 from previouse window)
+     so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:10 <-> 10:30:10`  
+     second job would start on `10:32:10` and its time range would be `10:30:10 <-> 10:32:10` (after 120 from previouse window)
 ```csharp
     new JobDefinition
     {
@@ -80,8 +80,8 @@ jobs can be scheduled in 3 different methods:
     }
 ```
 
-  2. **Cron Job scheduling** .in the below example, lets assume it was called on time `10:30:10`, the cron represents [At every 2nd minute](https://crontab.guru/#*/2_*_*_*_*)
-     so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:10 <-> 10:30:00` (up to range of 120 seconds)  
+  1. **Cron Job scheduling** .in the below example, lets assume it was called on time `10:30:10`, the cron represents [At every 2nd minute](https://crontab.guru/#*/2_*_*_*_*)
+     so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:00 <-> 10:30:00` (up to range of 120 seconds)  
      second job would start on `10:32:00` and its time range would be `10:30:00 <-> 10:32:00` (exatly 120 seconds and At every 2nd minute)
 ```csharp
     new JobDefinition
