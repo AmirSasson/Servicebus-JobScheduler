@@ -58,7 +58,7 @@ see TopicsFlow.vsdx visio file for logical flow
    or  
    `dotnet run --modes JobWindowValid_ScheduleNextRun JobWindowValid_RuleTimeWindowExecution --tester-simulator false`  
    see `dotnet run -- --help` to view more running modes
-- most common run setup would be to run the scheduling and siulator in separate process than the bussiness logic  
+- **most common dev run setup** would be to run the scheduling and simulator in separate process than the bussiness logic  
   to do so, run these commands each on different window:
     1. simulator only: `dotnet run --all-modes false --tester-simulator true`
     2. scheduling only: `dotnet run --modes JobDefinitionChange_ImmediateScheduleRule ReadyToRunJobWindow_Validation JobWindowValid_ScheduleNextRun --tester-simulator false`
