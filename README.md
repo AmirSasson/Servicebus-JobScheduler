@@ -75,8 +75,7 @@ jobs can be scheduled in 3 different methods:
      ```csharp
     new JobDefinition
     {
-      ....                    
-        WindowTimeRangeSeconds = 180,
+      ....                            
         Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = 120 },                   
       ....
     }
@@ -89,10 +88,19 @@ jobs can be scheduled in 3 different methods:
   ```csharp
     new JobDefinition
     {
-      ....                    
-        WindowTimeRangeSeconds = 120,
-        Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" },                  
       ....
+        Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" },                  
+      ....      
+    }
+
+  ```   
+  OR you can schedule a cron job that will look on a specific lookback time window, in this example it would run every 2 minutes, and look back on a 1 hour (3600sec) time range, (overlapped time ranges)
+  ```csharp
+    new JobDefinition
+    {
+      ....
+        Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" ,RunIntervalSeconds = 3600},                  
+      ....      
     }
 
   ```   
@@ -103,8 +111,7 @@ jobs can be scheduled in 3 different methods:
   ```
   new JobDefinition
   {
-    ....                    
-      WindowTimeRangeSeconds = 120,
+    ....                          
       Schedule = new JobSchedule { PeriodicJob = true, ScheduleEndTime = DateTime.Parse("12/28/2020 4:00:00 PM"), ForceSuppressWindowValidation = true, RunIntervalSeconds = 120 },
       LastRunWindowUpperBound = DateTime.Parse("12/28/2020 1:00:00 PM")        
     ....
