@@ -34,9 +34,9 @@ namespace Servicebus.JobScheduler.Core.Contracts
 
     public interface IRetryDefination
     {
-        public TimeSpan Minimal { get; }
-        public TimeSpan Maximal { get; }
-        public int MaxRetryCount { get; }
+        TimeSpan Minimal { get; }
+        TimeSpan Maximal { get; }
+        int MaxRetryCount { get; }
         TimeSpan GetDelay(int currentRetry);
     }
 

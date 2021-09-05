@@ -36,7 +36,7 @@ namespace Servicebus.JobScheduler.Core.Bus
 
         }
 
-        public async Task PublishAsync(IMessageBase msg, TTopics topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null)
         {
             var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
 
@@ -65,7 +65,7 @@ namespace Servicebus.JobScheduler.Core.Bus
         }
 
         public async Task<bool> RegisterSubscriber<TMessage>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMessage> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-            where TMessage : class, IMessageBase
+            where TMessage : class, IBaseMessage
         {
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
@@ -123,7 +123,7 @@ namespace Servicebus.JobScheduler.Core.Bus
             return true;
         }
 
-        private void PublishAsync(IMessageBase message, TTopics topicToPublish, object executeOnUtc)
+        private void PublishAsync(BaseMessage message, TTopics topicToPublish, object executeOnUtc)
         {
             throw new NotImplementedException();
         }

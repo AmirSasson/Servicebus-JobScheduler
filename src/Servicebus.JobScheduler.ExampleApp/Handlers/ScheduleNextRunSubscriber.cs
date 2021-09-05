@@ -8,13 +8,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
     public class ScheduleNextRunSubscriber : BaseSimulatorHandler<JobDefinition>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
 
-        public ScheduleNextRunSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
+        public ScheduleNextRunSubscriber(ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
-            _bus = bus;
             _logger = logger;
         }
 
@@ -24,7 +22,10 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger.LogInformation($"handling JobDefinition should reschedule for later: {shouldScheduleNextWindow}");
             if (shouldScheduleNextWindow)
             {
-                return publishWindowReady(msg).AsTask();
+                var nextJob = publishWindowReady(msg);
+                JobWindow job = nextJob.ContinueWithResult.Message as JobWindow;
+                _logger.LogInformation($"Scheduling Next window: {job.FromTime} -> {job.ToTime} -> executed on {nextJob.ContinueWithResult.ExecuteOnUtc}");
+                return nextJob.AsTask();
             }
             return HandlerResponse<Topics>.FinalOkAsTask;
         }
@@ -38,19 +39,18 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         /// <returns></returns>
         private HandlerResponse<Topics> publishWindowReady(JobDefinition msg, bool runInIntervals = true)
         {
-            var nextWindowFromTime = msg.LastRunWindowUpperBound;
-            DateTime? nextWindowToTime = msg.Schedule.GetNextScheduleUpperBoundTime(msg.LastRunWindowUpperBound);
+            (DateTime? nextWindowFromTime, DateTime? nextWindowToTime) = msg.Schedule.GetNextScheduleWindowTimeRange(msg.LastRunWindowUpperBound);
 
             if (nextWindowToTime.HasValue)
             {
                 var window = new JobWindow //TODO: Auto mapper
                 {
                     Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
-                    WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
+                    //WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
                     Name = "",
                     RuleId = msg.RuleId,
                     Schedule = msg.Schedule,
-                    FromTime = nextWindowFromTime,
+                    FromTime = nextWindowFromTime.Value,
                     ToTime = nextWindowToTime.Value,
                     Etag = msg.Etag,
                     RunId = msg.RunId,

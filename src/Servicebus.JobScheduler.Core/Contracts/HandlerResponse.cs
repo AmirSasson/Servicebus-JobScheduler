@@ -11,7 +11,7 @@ namespace Servicebus.JobScheduler.Core.Contracts
         {
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public TTopics TopicToPublish { get; set; }
-            public IMessageBase Message { get; set; }
+            public BaseMessage Message { get; set; }
             public DateTime? ExecuteOnUtc { get; set; }
         }
         public ContinueWith ContinueWithResult { get; set; }

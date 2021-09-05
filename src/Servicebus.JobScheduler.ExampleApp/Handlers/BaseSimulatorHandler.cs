@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
     public abstract class BaseSimulatorHandler<TMsg> : IMessageHandler<Topics, TMsg>
-        where TMsg : class, IMessageBase
+        where TMsg : class, IBaseMessage
     {
         private readonly int _simulateFailurePercents;
         private readonly TimeSpan _simulateExecutionTime;

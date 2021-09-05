@@ -14,10 +14,9 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         private readonly int _simulateFailurePercents;
         static int counterDummy;
 
-        public WindowExecutionSubscriber(IMessageBus<Topics, Subscriptions> bus, ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents, TimeSpan simulateExecutionTime)
+        public WindowExecutionSubscriber(ILogger<WindowExecutionSubscriber> logger, int simulateFailurePercents, TimeSpan simulateExecutionTime)
         : base(simulateFailurePercents, simulateExecutionTime, logger)
         {
-            _bus = bus;
             _logger = logger;
             _simulateFailurePercents = simulateFailurePercents;
         }
@@ -62,7 +61,8 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.RuleId} call: #{counterDummy}");
             //   if (counterDummy % 2 == 0)
             //   {
-            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
+            //return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
+            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: false, result: null));
             //   }
             //   return (conditionMet: false, result: null);
         }

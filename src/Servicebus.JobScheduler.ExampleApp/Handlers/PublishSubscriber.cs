@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class PublishSubscriber : BaseSimulatorHandler<JobOutput>
+    public class JobResultPublishingSubscriber : BaseSimulatorHandler<JobOutput>
     {
         private readonly ILogger _logger;
         private readonly string _runId;
 
-        public PublishSubscriber(ILogger<PublishSubscriber> logger, string runId, int simulateFailurePercents) : base(simulateFailurePercents, TimeSpan.Zero, logger)
+        public JobResultPublishingSubscriber(ILogger<JobResultPublishingSubscriber> logger, string runId, int simulateFailurePercents) : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _logger = logger;
             _runId = runId;
