@@ -71,21 +71,19 @@ jobs can be scheduled in 3 different methods:
      in the below example, lets assume it was called on time `10:30:10`
      so the first job window will start immediately `(10:30:10)` and its time range would be `10:27:10 <-> 10:30:10` (range of 180 seconds)  
      second job would start on `10:32:10` and its time range would be `10:29:10 <-> 10:32:10` (after 120 from previouse window)
-
-     ```csharp
+```csharp
     new JobDefinition
     {
       ....                            
         Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = 120 },                   
       ....
     }
-
-     ```
+```
 
   2. **Cron Job scheduling** .in the below example, lets assume it was called on time `10:30:10`, the cron represents [At every 2nd minute](https://crontab.guru/#*/2_*_*_*_*)
      so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:10 <-> 10:30:00` (up to range of 120 seconds)  
      second job would start on `10:32:00` and its time range would be `10:30:00 <-> 10:32:00` (exatly 120 seconds and At every 2nd minute)
-  ```csharp
+```csharp
     new JobDefinition
     {
       ....
@@ -93,7 +91,7 @@ jobs can be scheduled in 3 different methods:
       ....      
     }
 
-  ```   
+```   
   OR you can schedule a cron job that will look on a specific lookback time window, in this example it would run every 2 minutes, and look back on a 1 hour (3600sec) time range, (overlapped time ranges)
   ```csharp
     new JobDefinition
@@ -108,14 +106,14 @@ jobs can be scheduled in 3 different methods:
   3. **adhoc runs of a predfeined time window**  
      in this example lets assume you would like to re-run jobs from `12/28/2020 1:00:00 PM` till `12/28/2020 4:00:00 PM`, we cancel the window validation phase in this case.
 
-  ```
+```csharp
   new JobDefinition
   {
     ....                          
       Schedule = new JobSchedule { PeriodicJob = true, ScheduleEndTime = DateTime.Parse("12/28/2020 4:00:00 PM"), ForceSuppressWindowValidation = true, RunIntervalSeconds = 120 },
       LastRunWindowUpperBound = DateTime.Parse("12/28/2020 1:00:00 PM")        
     ....
-  ```
+```
 
 #### dockerize:
 from root folder run:  
