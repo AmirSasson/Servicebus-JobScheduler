@@ -14,10 +14,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         /// </summary>
         public string CronSchedulingExpression { get; set; }
 
-        public int RunIntervalSeconds { get; set; }
+        /// <summary>
+        /// When Null, it is calculated by window Range to avoid overlapping with other previous windows time ranges
+        /// </summary>
+        public int? RunIntervalSeconds { get; set; }
 
         /// <summary>
-        /// Seconds to delay when window is due
+        /// Seconds to delay when window is due (mostly used when you want to stall the Job, when data is not ready/ingested yet)
         /// </summary>
         public int? RunDelayUponDueTimeSeconds { get; set; }
 
@@ -39,19 +42,40 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         /// <summary>
         /// returns next Scheduletime based on previous window Upper Bound
         /// </summary>
-        public DateTime? GetNextScheduleUpperBoundTime(DateTime previousRunUpperBound)
+        public (DateTime? from, DateTime? to) GetNextScheduleWindowTimeRange(DateTime? previousRunUpperBound)
         {
-            var nextWindowToTime = previousRunUpperBound.Add(TimeSpan.FromSeconds(this.RunIntervalSeconds));
+            int actualRunIntervalSeconds = this.RunIntervalSeconds ?? getWindowRangeInSeconds();
+            var actualPreviousRunUpperBound = previousRunUpperBound ?? DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(actualRunIntervalSeconds));
+            var nextWindowLowerBoundTime = actualPreviousRunUpperBound;
+            var nextWindowUpperBoundTime = actualPreviousRunUpperBound.Add(TimeSpan.FromSeconds(actualRunIntervalSeconds));
 
             if (!string.IsNullOrEmpty(CronSchedulingExpression))
             {
-                nextWindowToTime = NCrontab.CrontabSchedule.Parse(CronSchedulingExpression).GetNextOccurrence(previousRunUpperBound);
+                nextWindowUpperBoundTime = NCrontab.CrontabSchedule.Parse(CronSchedulingExpression).GetNextOccurrence(actualPreviousRunUpperBound);
+                nextWindowLowerBoundTime = nextWindowUpperBoundTime.Subtract(TimeSpan.FromSeconds(actualRunIntervalSeconds));
             }
-            if (!ScheduleEndTime.HasValue || nextWindowToTime <= ScheduleEndTime.Value)
+            if (!ScheduleEndTime.HasValue || nextWindowUpperBoundTime <= ScheduleEndTime.Value)
             {
-                return nextWindowToTime;
+                return (nextWindowLowerBoundTime, nextWindowUpperBoundTime);
             }
-            return null;
+            return (null, null);
+        }
+
+        private int getWindowRangeInSeconds()
+        {
+            if (!this.RunIntervalSeconds.HasValue && !string.IsNullOrEmpty(CronSchedulingExpression))
+            {
+                var cron = NCrontab.CrontabSchedule.Parse(CronSchedulingExpression);
+                var occurrence1 = cron.GetNextOccurrence(DateTime.UtcNow);
+                var occurrence2 = cron.GetNextOccurrence(occurrence1);
+                var rangeInSec = (int)(occurrence2 - occurrence1).TotalSeconds;
+                return rangeInSec;
+            }
+            else if (this.RunIntervalSeconds.HasValue)
+            {
+                return this.RunIntervalSeconds.Value;
+            }
+            throw new InvalidOperationException("Scheduled job must specify a scheduling method or time window range. either RunIntervalSeconds or CrontabSchedule must contains valid values");
         }
     }
     public class JobDefinition : BaseMessage
@@ -61,11 +85,14 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         public string RuleId { get; set; }
         public string Etag { get; set; }
         public string RunId { get; set; }
-        public DateTime LastRunWindowUpperBound { get; set; }
+        /// <summary>
+        /// last run Window upper time bound
+        /// </summary>
+        public DateTime? LastRunWindowUpperBound { get; set; }
 
-        public int WindowTimeRangeSeconds { get; set; }
-        [JsonIgnore]
-        public TimeSpan WindowTimeRange => TimeSpan.FromSeconds(WindowTimeRangeSeconds);
+        // public int? WindowTimeRangeSeconds { get; set; }
+        // [JsonIgnore]
+        // public TimeSpan WindowTimeRange => TimeSpan.FromSeconds(WindowTimeRangeSeconds);
 
         public JobSchedule Schedule { get; set; }
         /// <summary>

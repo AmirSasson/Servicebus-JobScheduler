@@ -12,7 +12,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
         private readonly string _folder;
 
         public SimpleFilePerJobDefinitionRepository(string folder)
-        {            
+        {
             _folder = folder;
             if (!Directory.Exists(folder))
             {
@@ -37,6 +37,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 File.Delete(ruleFileName(rule.RuleId));
             }
             rule.Etag = Guid.NewGuid().ToString();
+            rule.JobDefinitionChangeTime = DateTime.UtcNow;
             File.WriteAllText(ruleFileName(rule.RuleId), JsonSerializer.Serialize(rule));
             return Task.FromResult(rule);
         }

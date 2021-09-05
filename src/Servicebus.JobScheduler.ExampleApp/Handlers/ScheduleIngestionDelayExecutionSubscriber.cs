@@ -27,11 +27,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             var delayedIngestionExecutionTime = msg.ToTime.Add(_ingestionDelay);
             if (msg.WindowExecutionTime >= delayedIngestionExecutionTime)
             {
-                _logger.LogWarning($"No need to schedule delayed execution cause the window already executed late! WindowExecutionTime: {msg.WindowExecutionTime}, delayedIngestionExecutionTime: {delayedIngestionExecutionTime}");
+                _logger.LogWarning($"No need to schedule delayed execution for window  ({msg.FromTime} -> {msg.ToTime}) to later, cause the window already executed late! WindowExecutionTime: {msg.WindowExecutionTime}, delayedIngestionExecutionTime: {delayedIngestionExecutionTime}");
             }
             else if (msg.Schedule.PeriodicJob)
             {
-                return new HandlerResponse<Topics> { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse<Topics>.ContinueWith { Message = delayedWindow, TopicToPublish = Topics.ReadyToRunJobWindow, ExecuteOnUtc = DateTime.UtcNow.Add(_ingestionDelay) } }.AsTask();
+                var laterExecutionTime = delayedIngestionExecutionTime;
+                _logger.LogWarning($"Scheduling same job ({msg.FromTime} -> {msg.ToTime}) to later {laterExecutionTime} WindowExecutionTime: {msg.WindowExecutionTime}, delayedIngestionExecutionTime: {delayedIngestionExecutionTime}");
+                return new HandlerResponse<Topics> { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse<Topics>.ContinueWith { Message = delayedWindow, TopicToPublish = Topics.ReadyToRunJobWindow, ExecuteOnUtc = laterExecutionTime } }.AsTask();
             }
 
             return HandlerResponse<Topics>.FinalOkAsTask;

@@ -29,11 +29,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 return HandlerResponse<Topics>.FinalOk;
             }
 
-            if (msg.WindowTimeRange <= TimeSpan.Zero)
-            {
-                _logger.LogCritical("Invalid Interval for rule!");
-                return HandlerResponse<Topics>.FinalOk;
-            }
+            // if (msg.WindowTimeRange <= TimeSpan.Zero)
+            // {
+            //     _logger.LogCritical("Invalid Interval for rule!");
+            //     return HandlerResponse<Topics>.FinalOk;
+            // }
 
             var handlerResult = HandlerResponse<Topics>.FinalOk;
 
