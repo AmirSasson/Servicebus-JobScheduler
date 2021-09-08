@@ -5,7 +5,7 @@ namespace Servicebus.JobScheduler.Core
         JobDefinitionChange,
         ReadyToRunJobWindow,
         JobWindowValid,
-        PermanentErrors,
+        PermanentSchedulingErrors,
     }
 
 
