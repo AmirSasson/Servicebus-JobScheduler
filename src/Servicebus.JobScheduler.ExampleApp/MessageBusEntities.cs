@@ -4,7 +4,7 @@ namespace Servicebus.JobScheduler.ExampleApp
     {
         JobWindowConditionMet,
         JobWindowConditionNotMet,
-        PermanentErrors,
+        PermanentExecutionErrors,
     }
 
 

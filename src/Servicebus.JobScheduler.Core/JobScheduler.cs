@@ -61,7 +61,7 @@ namespace Servicebus.JobScheduler.Core
                SchedulingSubscriptions.ReadyToRunJobWindow_Validation.ToString(),
                concurrencyLevel: 3,
                new WindowValidatorSubscriber<TJobPayload>(loggerFactory.CreateLogger<WindowValidatorSubscriber<TJobPayload>>(), changeProvider),
-               new RetryPolicy { PermanentErrorsTopic = SchedulingTopics.PermanentErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
+               new RetryPolicy { PermanentErrorsTopic = SchedulingTopics.PermanentSchedulingErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                source);
 
 

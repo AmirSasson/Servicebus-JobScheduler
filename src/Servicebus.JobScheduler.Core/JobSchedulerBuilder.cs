@@ -81,6 +81,10 @@ namespace Servicebus.JobScheduler.Core
 
         public JobSchedulerBuilder<TJobPayload> AddMainJobExecuter(IMessageHandler<JobWindow<TJobPayload>> mainHandler, int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
         {
+            if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
+            {
+                _topics.Add(retryPolicy.PermanentErrorsTopic);
+            }
             if (enabled)
             {
                 _initTasks.Add(async (_) =>
@@ -99,6 +103,10 @@ namespace Servicebus.JobScheduler.Core
 
         public JobSchedulerBuilder<TJobPayload> AddSubJobHandler<TMessageType>(string topic, string sub, IMessageHandler<TMessageType> handler, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true) where TMessageType : class, IJob
         {
+            if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
+            {
+                _topics.Add(retryPolicy.PermanentErrorsTopic);
+            }
             _topics.Add(topic);
             _subscriptions.Add(sub);
             if (enabled)
