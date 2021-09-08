@@ -10,22 +10,18 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace Servicebus.JobScheduler.ExampleApp.Emulators
 {
-    public class InMemoryMessageBus<TTopics, TSubscription> : IMessageBus<TTopics, TSubscription> where TTopics : struct, Enum where TSubscription : struct, Enum
+    public class InMemoryMessageBus : IMessageBus
     {
-        class DummyMessage : BaseMessage
+        class DummyMessage : BaseJob
         {
-            public string Id => "1";
-
-            public string RunId => "1";
         }
 
         enum DummyTopic
         {
         }
-        readonly Dictionary<TSubscription, IList> _eventHandlers = new();
+        readonly Dictionary<string, IList> _eventHandlers = new();
         private readonly ILogger _logger;
 
         public InMemoryMessageBus(ILogger logger)
@@ -33,7 +29,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             _logger = logger;
         }
 
-        public async Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
         {
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
@@ -43,7 +39,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 var testSerializationNotFailing = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType()));
                 var str = Encoding.UTF8.GetString(testSerializationNotFailing);
                 var msgAfterSerializing = JsonSerializer.Deserialize(str, msg.GetType());
-                if (string.IsNullOrWhiteSpace((msgAfterSerializing as BaseMessage).Id))
+                if (string.IsNullOrWhiteSpace((msgAfterSerializing as BaseJob).Id))
                 {
 
                     throw new ArgumentException("Message Id cannot be null or empty");
@@ -52,7 +48,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 if (executeOnUtc.HasValue)
                 {
                     int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
-                    var _ = new Timer((m) => { publishToSubscribers(m as BaseMessage, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
+                    var _ = new Timer((m) => { publishToSubscribers(m as BaseJob, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
                 }
                 else
                 {
@@ -66,7 +62,29 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
             }
         }
 
-        private async Task publishToSubscribers(BaseMessage msg, TTopics topic)
+        Task<bool> IMessageBus.RegisterSubscriber<TMessage>(string topic, string subscription, int concurrencyLevel, IMessageHandler<TMessage> handler, RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+         where TMessage : class
+        {
+            _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
+
+            if (!_eventHandlers.TryGetValue(subscription, out var subs))
+            {
+                subs = new List<IMessageHandler<TMessage>>();
+            }
+            subs.Add(handler);
+            _eventHandlers[subscription] = subs;
+            return Task.FromResult(true);
+        }
+
+        public Task SetupEntitiesIfNotExist(IConfiguration _, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames) => Task.CompletedTask;
+
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        private async Task publishToSubscribers(BaseJob msg, string topic)
         {
             foreach (var eventHandlersKvp in _eventHandlers)
             {
@@ -76,7 +94,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     {
                         _logger.LogInformation($"Incoming {topic}:{eventHandlersKvp.Key}/{msg.Id} [{msg.GetType().Name}] delegate to {h.GetType().Name}");
 
-                        var handleMethod = h.GetType().GetMethod(nameof(IMessageHandler<DummyTopic, DummyMessage>.Handle));
+                        var handleMethod = h.GetType().GetMethod(nameof(IMessageHandler<DummyMessage>.Handle));
 
                         var retries = 0;
                         var success = false;
@@ -85,7 +103,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                             try
                             {
                                 var task = handleMethod.Invoke(h, new[] { msg });
-                                var handlerResult = (task as Task<HandlerResponse<TTopics>>);
+                                var handlerResult = (task as Task<HandlerResponse>);
                                 var result = await handlerResult;
                                 success = true;
                                 _logger.LogInformation($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
@@ -110,27 +128,6 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     };
                 }
             }
-        }
-
-        public Task SetupEntitiesIfNotExist(IConfiguration _) => Task.CompletedTask;
-
-        public Task<bool> RegisterSubscriber<TMsg>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMsg> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-         where TMsg : class, IBaseMessage
-        {
-            _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
-
-            if (!_eventHandlers.TryGetValue(subscription, out var subs))
-            {
-                subs = new List<IMessageHandler<TTopics, TMsg>>();
-            }
-            subs.Add(handler);
-            _eventHandlers[subscription] = subs;
-            return Task.FromResult(true);
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            return ValueTask.CompletedTask;
         }
     }
 }

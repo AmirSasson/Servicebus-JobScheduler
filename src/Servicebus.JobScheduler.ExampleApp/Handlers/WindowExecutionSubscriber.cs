@@ -1,15 +1,15 @@
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Utils;
+using Servicebus.JobScheduler.ExampleApp.Common;
 using Servicebus.JobScheduler.ExampleApp.Messages;
 using System;
 using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class WindowExecutionSubscriber : BaseSimulatorHandler<JobWindow>
+    public class WindowExecutionSubscriber : BaseSimulatorHandler<JobWindow<JobCustomData>>
     {
-        private readonly IMessageBus<Topics, Subscriptions> _bus;
         private readonly ILogger _logger;
         private readonly int _simulateFailurePercents;
         static int counterDummy;
@@ -20,19 +20,19 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _logger = logger;
             _simulateFailurePercents = simulateFailurePercents;
         }
-        protected override async Task<HandlerResponse<Topics>> handlePrivate(JobWindow msg)
+        protected override async Task<HandlerResponse> handlePrivate(JobWindow<JobCustomData> msg)
         {
             var result = await runRuleCondition(msg);
-            HandlerResponse<Topics> handlerResult;
+            HandlerResponse handlerResult;
             if (result.conditionMet)
             {
-                handlerResult = new HandlerResponse<Topics>
+                handlerResult = new HandlerResponse
                 {
                     ResultStatusCode = 200,
-                    ContinueWithResult = new HandlerResponse<Topics>.ContinueWith
+                    ContinueWithResult = new HandlerResponse.ContinueWith
                     {
-                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", WindowId = msg.Id, RuleId = msg.RuleId, RunId = msg.RunId, Rule = msg },
-                        TopicToPublish = Topics.JobWindowConditionMet
+                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", JobSource = msg },
+                        TopicToPublish = Topics.JobWindowConditionMet.ToString()
                     }
                 };
             }
@@ -41,13 +41,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 var execContext = msg.ToJson().FromJson<JobWindowExecutionContext>();
                 execContext.WindowExecutionTime = DateTime.UtcNow;
 
-                handlerResult = new HandlerResponse<Topics>
+                handlerResult = new HandlerResponse
                 {
                     ResultStatusCode = 200,
-                    ContinueWithResult = new HandlerResponse<Topics>.ContinueWith
+                    ContinueWithResult = new HandlerResponse.ContinueWith
                     {
                         Message = execContext,
-                        TopicToPublish = Topics.JobWindowConditionNotMet
+                        TopicToPublish = Topics.JobWindowConditionNotMet.ToString()
                     }
                 };
             }
@@ -55,14 +55,14 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             return handlerResult;
         }
 
-        private Task<(bool conditionMet, object result)> runRuleCondition(JobWindow msg)
+        private Task<(bool conditionMet, object result)> runRuleCondition(JobWindow<JobCustomData> msg)
         {
             counterDummy++;
-            _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.RuleId} call: #{counterDummy}");
+            _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.Id} call: #{counterDummy}");
             //   if (counterDummy % 2 == 0)
             //   {
             //return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
-            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: false, result: null));
+            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
             //   }
             //   return (conditionMet: false, result: null);
         }

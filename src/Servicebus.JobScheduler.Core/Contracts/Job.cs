@@ -3,7 +3,7 @@ using Servicebus.JobScheduler.Core.Contracts.Messages;
 using System;
 using System.Text.Json.Serialization;
 
-namespace Servicebus.JobScheduler.ExampleApp.Messages
+namespace Servicebus.JobScheduler.Core.Contracts
 {
     public class JobSchedule
     {
@@ -78,11 +78,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
             throw new InvalidOperationException("Scheduled job must specify a scheduling method or time window range. either RunIntervalSeconds or CrontabSchedule must contains valid values");
         }
     }
-    public class JobDefinition : BaseMessage
+
+    public class Job<TJobPayload> : BaseJob
     {
-        public string Name { get; set; }
+        public TJobPayload Payload { get; set; }
         public string RuleId { get; set; }
-        public string Etag { get; set; }
         /// <summary>
         /// last run Window upper time bound
         /// </summary>
@@ -99,14 +99,6 @@ namespace Servicebus.JobScheduler.ExampleApp.Messages
         public DateTime JobDefinitionChangeTime { get; set; }
 
         public JobStatus Status { get; set; }
-        public JobBehaviorMode BehaviorMode { get; set; }
         public bool SkipNextWindowValidation { get; set; }
-
-        public enum JobBehaviorMode
-        {
-            Simple,
-            DisabledAfterFirstJobOutput,
-        }
     }
 }
-

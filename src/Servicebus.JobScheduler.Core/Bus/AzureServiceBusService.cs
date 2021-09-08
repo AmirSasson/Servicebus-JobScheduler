@@ -17,14 +17,13 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.Core.Bus
 {
-    public class AzureServiceBusService<TTopics, TSubscription> : IMessageBus<TTopics, TSubscription> where TTopics : struct, Enum where TSubscription : struct, Enum
+    public class AzureServiceBusService : IMessageBus
     {
         private readonly ILogger _logger;
-        private readonly string _runId;
         private readonly string _connectionString;
         private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new();
 
-        public AzureServiceBusService(IConfiguration config, ILogger logger, string runId)
+        public AzureServiceBusService(IConfiguration config, ILogger logger)
         {
             _connectionString = config.GetValue<string>("ServiceBus:ConnectionString");
             if (string.IsNullOrEmpty(_connectionString))
@@ -32,11 +31,10 @@ namespace Servicebus.JobScheduler.Core.Bus
                 throw new ArgumentNullException("ServiceBus:ConnectionString");
             }
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _runId = runId;
 
         }
 
-        public async Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
         {
             var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
             try
@@ -64,8 +62,8 @@ namespace Servicebus.JobScheduler.Core.Bus
             }
         }
 
-        public async Task<bool> RegisterSubscriber<TMessage>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMessage> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-            where TMessage : class, IBaseMessage
+        public async Task<bool> RegisterSubscriber<TMessage>(string topic, string subscription, int concurrencyLevel, IMessageHandler<TMessage> handler, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+            where TMessage : class, IJob
         {
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
@@ -92,11 +90,6 @@ namespace Servicebus.JobScheduler.Core.Bus
                 {
                     var str = Encoding.UTF8.GetString(msg.Body);
                     var obj = str.FromJson<TMessage>();
-                    if (obj.RunId != _runId)
-                    {
-                        // test ignore other runs
-                        return;
-                    }
 
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handler.GetType().Name}");
 
@@ -123,12 +116,12 @@ namespace Servicebus.JobScheduler.Core.Bus
             return true;
         }
 
-        private void PublishAsync(BaseMessage message, TTopics topicToPublish, object executeOnUtc)
+        private void PublishAsync(BaseJob message, string topicToPublish, object executeOnUtc)
         {
             throw new NotImplementedException();
         }
 
-        private async Task startDeadLetterRetryEngine(TTopics retriesTopic, TSubscription subscription, CancellationTokenSource source, RetryPolicy<TTopics> retry)
+        private async Task startDeadLetterRetryEngine(string retriesTopic, string subscription, CancellationTokenSource source, Contracts.RetryPolicy retry)
         {
             var dlqPath = EntityNameHelper.FormatDeadLetterPath(EntityNameHelper.FormatSubscriptionPath(retriesTopic.ToString(), subscription.ToString()));
 
@@ -143,7 +136,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 while (!source.IsCancellationRequested)
                 {
                     var msg = await deadQueueReceiver.ReceiveAsync();
-                    if (msg != null && msg.MessageId.Contains(_runId))
+                    if (msg != null)
                     {
                         var reSubmit = msg.Clone();
                         reSubmit.UserProperties.TryGetValue("retriesCount", out object retriesCountObj);
@@ -177,12 +170,12 @@ namespace Servicebus.JobScheduler.Core.Bus
             });
         }
 
-        public async Task SetupEntitiesIfNotExist(IConfiguration configuration)
+        public async Task SetupEntitiesIfNotExist(IConfiguration configuration, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
         {
             _logger.LogCritical("Running service bus Setup..");
             var adminClient = new ServiceBusAdministrationClient(_connectionString);
 
-            var topicsNames = Enum.GetNames<TTopics>();
+            //var topicsNames = Enum.GetNames<TTopics>();
 
             CreateTopicOptions getTopicOptions(string topicName)
             {
@@ -206,7 +199,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 }
             }
 
-            var subscriptionNames = Enum.GetNames<TSubscription>();
+            //var subscriptionNames = Enum.GetNames<TSubscription>();
 
             CreateSubscriptionOptions getSubscriptionOptions(string topicName, string subscriptionName)
             {

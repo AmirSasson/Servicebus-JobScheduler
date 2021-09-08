@@ -1,16 +1,17 @@
 using Microsoft.Extensions.Configuration;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.Core.Contracts
 {
-    public interface IMessageBus<TTopics, TSubscription> : IAsyncDisposable where TTopics : struct, Enum where TSubscription : struct, Enum
+    public interface IMessageBus : IAsyncDisposable
     {
-        Task PublishAsync(BaseMessage msg, TTopics topic, DateTime? executeOnUtc = null);
-        Task<bool> RegisterSubscriber<TMessage>(TTopics topic, TSubscription subscription, int concurrencyLevel, IMessageHandler<TTopics, TMessage> handler, RetryPolicy<TTopics> deadLetterRetrying, CancellationTokenSource source)
-            where TMessage : class, IBaseMessage;
-        Task SetupEntitiesIfNotExist(IConfiguration config);
+        Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null);
+        Task<bool> RegisterSubscriber<TMessage>(string topic, string subscription, int concurrencyLevel, IMessageHandler<TMessage> handler, RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+            where TMessage : class, IJob;
+        Task SetupEntitiesIfNotExist(IConfiguration configuration, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames);
     }
 }

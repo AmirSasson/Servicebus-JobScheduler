@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public abstract class BaseSimulatorHandler<TMsg> : IMessageHandler<Topics, TMsg>
-        where TMsg : class, IBaseMessage
+    public abstract class BaseSimulatorHandler<TMsg> : IMessageHandler<TMsg>
+        where TMsg : class, IJob
     {
         private readonly int _simulateFailurePercents;
         private readonly TimeSpan _simulateExecutionTime;
@@ -20,10 +20,10 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             _simulateExecutionTime = simulateExecutionTime;
             _logger = logger;
         }
-        abstract protected Task<HandlerResponse<Topics>> handlePrivate(TMsg msg);
+        abstract protected Task<HandlerResponse> handlePrivate(TMsg msg);
 
 
-        public async Task<HandlerResponse<Topics>> Handle(TMsg msg)
+        public async Task<HandlerResponse> Handle(TMsg msg)
         {
             bool shouldSimulateError()
             {

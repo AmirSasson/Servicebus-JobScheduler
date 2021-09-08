@@ -52,17 +52,17 @@ see TopicsFlow.vsdx visio file for logical flow
 - from within the ExampleApp folder `dotnet run` - first run, by default, will configure Azure ServiceBus Entities for you.  
 - (Non-Cloud) - you can also run a local In Memory version of ServiceBus `dotnet run -l true`
 - you can also use `--modes <<mode[]>>` argument to run a specific/multiple modes of process i.e.  
-   `dotnet run --run-setup true --all-modes false --tester-simulator false`    
-   or  
-    `dotnet run --modes JobDefinitionChange_ImmediateScheduleRule --tester-simulator false`  
-   or  
-   `dotnet run --modes JobWindowValid_ScheduleNextRun JobWindowValid_RuleTimeWindowExecution --tester-simulator false`  
+   `dotnet run --all-modes false --tester-simulator false`    
+   or run the scheduler workers
+    `dotnet run --modes scheduling --tester-simulator false`  
+   or run the scheduler the executing tasks
+   `dotnet run --modes executing JobWindowConditionMet_Publish JobWindowConditionMet_Suppress JobWindowConditionNotMet_ScheduleIngestionDelay --tester-simulator false`  
    see `dotnet run -- --help` to view more running modes
 - **most common dev run setup** would be to run the scheduling and simulator in separate process than the bussiness logic  
   to do so, run these commands each on different window:
     1. simulator only: `dotnet run --all-modes false --tester-simulator true`
-    2. scheduling only: `dotnet run --modes JobDefinitionChange_ImmediateScheduleRule ReadyToRunJobWindow_Validation JobWindowValid_ScheduleNextRun --tester-simulator false`
-    3. business logic: `dotnet run   --modes JobWindowValid_RuleTimeWindowExecution JobWindowConditionMet_Publish JobWindowConditionMet_Suppress JobWindowConditionNotMet_ScheduleIngestionDelay  --tester-simulator false`
+    2. scheduling only: `dotnet run --modes scheduling --tester-simulator false`
+    3. job executing business logic: `dotnet run --modes executing JobWindowConditionMet_Publish JobWindowConditionMet_Suppress JobWindowConditionNotMet_ScheduleIngestionDelay  --tester-simulator false`
 
 ### test
 - from within the root folder `dotnet test` (tests tbd)
@@ -71,6 +71,22 @@ see TopicsFlow.vsdx visio file for logical flow
 ### deploy (cloud)
 currently this app is running as a linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
 
+### use as consumer
+typical job execution workflow
+```csharp
+            var builder = new JobSchedulerBuilder<JobCustomData>()
+                .UseLoggerFactory(loggerFactory)                
+                .WithCancelationSource(source)
+                .WithConfiguration(config)
+                .AddMainJobExecuter(
+                    new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
+                    concurrencyLevel: 3,
+                    new RetryPolicy { PermanentErrorsTopic = Topics.PermanentErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) })                
+                .WithJobChangeProvider(db);
+            _scheduler = await builder.Build();
+```
+see example app for more complex options
+
 ### <a id="scheduling"></a>Scheduling jobs ###
 jobs can be scheduled in 3 different methods:
   1. **Time Interval sliding window** - occurs every X seconds from the actual schduling time.  
@@ -78,34 +94,37 @@ jobs can be scheduled in 3 different methods:
      so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:10 <-> 10:30:10`  
      second job would start on `10:32:10` and its time range would be `10:30:10 <-> 10:32:10` (after 120 from previouse window)
 ```csharp
-    new JobDefinition
+    var job = new Job<SomeCustomPayload>
     {
       ....                            
         Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = 120 },                   
       ....
     }
+    _sceduler.ScheduleJob(job);
 ```
 
   1. **Cron Job scheduling** .in the below example, lets assume it was called on time `10:30:10`, the cron represents [At every 2nd minute](https://crontab.guru/#*/2_*_*_*_*)
      so the first job window will start immediately `(10:30:10)` and its time range would be `10:28:00 <-> 10:30:00` (up to range of 120 seconds)  
      second job would start on `10:32:00` and its time range would be `10:30:00 <-> 10:32:00` (exatly 120 seconds and At every 2nd minute)
 ```csharp
-    new JobDefinition
+    var job = new Job<SomeCustomPayload>
     {
       ....
         Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" },                  
       ....      
     }
+    _sceduler.ScheduleJob(job);
 
 ```   
   OR you can schedule a cron job that will look on a specific lookback time window, in this example it would run every 2 minutes, and look back on a 1 hour (3600sec) time range, (overlapped time ranges)
   ```csharp
-    new JobDefinition
+     var job = new Job<SomeCustomPayload>
     {
       ....
         Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" ,RunIntervalSeconds = 3600},                  
       ....      
     }
+     _sceduler.ScheduleJob(job);
   ```   
      
   3. **adhoc runs of a predfeined time window**  
@@ -118,6 +137,8 @@ jobs can be scheduled in 3 different methods:
       Schedule = new JobSchedule { PeriodicJob = true, ScheduleEndTime = DateTime.Parse("12/28/2020 4:00:00 PM"), ForceSuppressWindowValidation = true, RunIntervalSeconds = 120 },
       LastRunWindowUpperBound = DateTime.Parse("12/28/2020 1:00:00 PM")        
     ....
+  }
+   _sceduler.ScheduleJob(job);
 ```
 
 #### dockerize:
