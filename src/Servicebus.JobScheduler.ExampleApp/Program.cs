@@ -121,7 +121,7 @@ namespace Servicebus.JobScheduler.ExampleApp
 
             var builder = new JobSchedulerBuilder<JobCustomData>()
                 .UseLoggerFactory(loggerFactory)
-                .UseSchedulingWorker(options.ShouldSchedulingWorkers())
+                .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
