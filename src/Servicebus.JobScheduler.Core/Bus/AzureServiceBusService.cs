@@ -143,11 +143,12 @@ namespace Servicebus.JobScheduler.Core.Bus
                         var retriesCount = Convert.ToInt32(retriesCountObj ?? 0);
                         reSubmit.To = subscription.ToString();
                         reSubmit.UserProperties["retriesCount"] = retriesCount + 1;
+                        reSubmit.UserProperties.TryGetValue("DeadLetterReason", out object dlqReason);
                         if (retriesCount < retry.RetryDefinition.MaxRetryCount)
                         {
                             var delay = retry.GetDelay(retriesCount);
                             reSubmit.ScheduledEnqueueTimeUtc = DateTime.UtcNow.Add(delay); //exponential backoff till max time
-                            _logger.LogInformation($"Scheduling retry#{retriesCount + 1} to in {delay.TotalSeconds}sec due: {reSubmit.ScheduledEnqueueTimeUtc} Topic: {retriesTopic}, Subscription: {subscription},...");
+                            _logger.LogInformation($"Scheduling retry#{retriesCount + 1} to in {delay.TotalSeconds}sec due: {reSubmit.ScheduledEnqueueTimeUtc} Topic: {retriesTopic}, Subscription: {subscription} reason:{dlqReason},...");
                             try
                             {
 

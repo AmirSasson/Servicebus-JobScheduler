@@ -60,7 +60,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             counterDummy++;
             _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.Id} call: #{counterDummy}");
 
-            var conditionMet = !msg.Schedule.PeriodicJob;
+            var conditionMet = !msg.Schedule.PeriodicJob || (DateTime.UtcNow - msg.ToTime).TotalSeconds > 90;
 
             //   if (counterDummy % 2 == 0)
             //   {

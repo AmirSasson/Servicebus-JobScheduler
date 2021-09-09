@@ -41,6 +41,24 @@
       "stopAtEntry": false
     },
     {
+      "name": ".NET Core Launch (console) Cloud No simulator",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "console": "externalTerminal",
+      "program": "${workspaceFolder}/src/Servicebus.JobScheduler.ExampleApp/bin/Debug/net5.0/Servicebus.JobScheduler.ExampleApp.dll",
+      "args": [
+        "--execute-error-rate",
+        "20",
+        "-r",
+        "900",
+        "-t",
+        "false"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false
+    },
+    {
       "name": ".NET Core Attach",
       "type": "coreclr",
       "request": "attach"
