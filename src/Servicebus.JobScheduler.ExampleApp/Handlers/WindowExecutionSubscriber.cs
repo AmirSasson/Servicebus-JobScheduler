@@ -31,7 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                     ResultStatusCode = 200,
                     ContinueWithResult = new HandlerResponse.ContinueWith
                     {
-                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", JobSource = msg, WindowId = msg.WindowId },
+                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", JobSource = msg, WindowId = msg.WindowId, WindowFromTime = msg.FromTime, WindowToTime = msg.ToTime, },
                         TopicToPublish = Topics.JobWindowConditionMet.ToString()
                     }
                 };

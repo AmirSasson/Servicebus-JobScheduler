@@ -51,7 +51,7 @@
         "--execute-error-rate",
         "20",
         "-r",
-        "900",
+        "950",
         "-t",
         "false"
       ],
