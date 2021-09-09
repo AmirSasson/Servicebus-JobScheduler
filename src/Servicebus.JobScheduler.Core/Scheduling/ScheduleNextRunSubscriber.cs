@@ -43,7 +43,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 var window = new JobWindow<TJobPayload> //TODO: Auto mapper
                 {
-                    Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.Id}",
+                    Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
                     Payload = msg.Payload,
                     RuleId = msg.RuleId,
                     Schedule = msg.Schedule,

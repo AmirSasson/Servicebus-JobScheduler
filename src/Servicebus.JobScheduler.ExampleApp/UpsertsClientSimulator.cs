@@ -24,8 +24,8 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                     Payload = new JobCustomData { Query = "test Query", BehaviorMode = JobCustomData.JobBehaviorMode.Simple },
                     //WindowTimeRangeSeconds = (int)ruleInterval.TotalSeconds,
                     //Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = (int)ruleInterval.TotalSeconds },
-                    //Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/5 * * * *" },
-                    Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/5 * * * *", RunIntervalSeconds = 6 * 60 },
+                    Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/3 * * * *" },
+                    //Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/5 * * * *", RunIntervalSeconds = 6 * 60 },
 
                     LastRunWindowUpperBound = null,//
                     SkipNextWindowValidation = true,

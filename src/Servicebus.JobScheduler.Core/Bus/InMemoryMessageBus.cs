@@ -10,15 +10,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-namespace Servicebus.JobScheduler.ExampleApp.Emulators
+
+namespace Servicebus.JobScheduler.Core.Bus.Emulator
 {
     public class InMemoryMessageBus : IMessageBus
     {
         class DummyMessage : BaseJob
-        {
-        }
-
-        enum DummyTopic
         {
         }
         readonly Dictionary<string, IList> _eventHandlers = new();
@@ -110,7 +107,6 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
 
                                 if (result.ContinueWithResult != null)
                                 {
-                                    // dont wait
                                     await PublishAsync(result.ContinueWithResult.Message, result.ContinueWithResult.TopicToPublish, result.ContinueWithResult.ExecuteOnUtc);
                                 }
                                 else

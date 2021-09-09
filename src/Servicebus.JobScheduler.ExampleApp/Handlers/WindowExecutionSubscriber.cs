@@ -31,7 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                     ResultStatusCode = 200,
                     ContinueWithResult = new HandlerResponse.ContinueWith
                     {
-                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", JobSource = msg },
+                        Message = new JobOutput { Id = Guid.NewGuid().ToString(), Name = "", JobSource = msg, WindowId = msg.WindowId },
                         TopicToPublish = Topics.JobWindowConditionMet.ToString()
                     }
                 };
@@ -59,10 +59,13 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         {
             counterDummy++;
             _logger.LogWarning($"Simulating window call {msg.FromTime:hh:mm:ss}-{msg.ToTime:hh:mm:ss} call to long unstable dependency for JobId {msg.Id} call: #{counterDummy}");
+
+            var conditionMet = !msg.Schedule.PeriodicJob;
+
             //   if (counterDummy % 2 == 0)
             //   {
             //return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
-            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: true, result: null));
+            return Task.FromResult<(bool conditionMet, object result)>((conditionMet: conditionMet, result: null));
             //   }
             //   return (conditionMet: false, result: null);
         }

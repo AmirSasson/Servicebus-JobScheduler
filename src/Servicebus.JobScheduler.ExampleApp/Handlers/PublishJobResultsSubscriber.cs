@@ -20,15 +20,15 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
             if (!File.Exists($"Joboutputs.{_runId}.csv"))
             {
                 // write csv headers
-                File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { "JobId,DateTime,WindowId,Id" });
+                File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { "OutputId,RuleId,DateTime,WindowId" });
             }
         }
         protected override Task<HandlerResponse> handlePrivate(JobOutput msg)
         {
             _logger.LogWarning($"***********************************************");
-            _logger.LogWarning($"NEW Job Result ARRIVED TO BE PUBLISHED!!! Published Job Result! [{msg.Id}] [{msg.JobSource.Id}] [{msg.WindowId}] {msg.Name}");
+            _logger.LogWarning($"NEW Job Result ARRIVED TO BE PUBLISHED!!! Published Job Result! [{msg.Id}] [{msg.JobSource.RuleId}] [{msg.WindowId}] {msg.Name}");
             _logger.LogWarning($"***********************************************");
-            File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { $"{msg.Id},{DateTime.UtcNow},{msg.WindowId},{msg.Id}" });
+            File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { $"{msg.Id},{msg.JobSource.RuleId},{DateTime.UtcNow},{msg.WindowId}" });
             return HandlerResponse.FinalOkAsTask;
         }
     }

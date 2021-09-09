@@ -124,6 +124,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .UseSchedulingWorker(options.ShouldSchedulingWorkers())
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
+                .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddMainJobExecuter(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,
@@ -149,15 +150,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                     enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
                 .WithJobChangeProvider(db);
 
-
-            IMessageBus bus;
-            if (options.LocalServiceBus == true)
-            {
-                logger.LogCritical("Running with local in mem Service bus mock");
-                bus = new InMemoryMessageBus(loggerFactory.CreateLogger<InMemoryMessageBus>());
-                builder.UsePubsubProvider(bus);
-            }
-            _scheduler = await builder.Build();
+            _scheduler = await builder.BuildAsync();
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             if (options.RunSimulator == true)

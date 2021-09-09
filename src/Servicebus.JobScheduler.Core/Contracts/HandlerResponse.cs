@@ -9,7 +9,6 @@ namespace Servicebus.JobScheduler.Core.Contracts
     {
         public class ContinueWith
         {
-            [JsonConverter(typeof(JsonStringEnumConverter))]
             public string TopicToPublish { get; set; }
             public BaseJob Message { get; set; }
             public DateTime? ExecuteOnUtc { get; set; }
