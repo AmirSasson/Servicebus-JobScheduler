@@ -50,7 +50,7 @@ namespace Servicebus.JobScheduler.ExampleApp
             return RunAll == true;
         }
 
-        internal bool ShouldSchedulingWorkers() => ShouldRun("scheduling");
+        internal bool ShouldRunSchedulingWorkers() => ShouldRun("scheduling");
 
         internal bool ShouldRunJobExecution() => ShouldRun("executing");
     }
