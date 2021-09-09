@@ -1,3 +1,5 @@
+using Servicebus.JobScheduler.Core.Contracts;
+using Servicebus.JobScheduler.Core.Contracts.Messages;
 using Servicebus.JobScheduler.ExampleApp.Common;
 using Servicebus.JobScheduler.ExampleApp.Messages;
 using System;
@@ -7,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Emulators
 {
-    public class SimpleFilePerJobDefinitionRepository : IRepository<JobDefinition>
+    public class SimpleFilePerJobDefinitionRepository : IRepository<Job<JobCustomData>>, Core.Contracts.Messages.IJobChangeProvider
     {
         private readonly string _folder;
 
@@ -19,26 +21,35 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 Directory.CreateDirectory(folder);
             }
         }
-        public Task<JobDefinition> GetById(string id)
+        public Task<Job<JobCustomData>> GetById(string id)
         {
-            JobDefinition rule = null;
+            Job<JobCustomData> rule = null;
             if (File.Exists(ruleFileName(id)))
             {
                 var str = File.ReadAllText(ruleFileName(id));
-                rule = JsonSerializer.Deserialize<JobDefinition>(str);
+                rule = JsonSerializer.Deserialize<Job<JobCustomData>>(str);
             }
             return Task.FromResult(rule);
         }
 
-        public Task<JobDefinition> Upsert(JobDefinition rule)
+        public async Task<ChangeType> GetJobChangeType(string jobId, string etag)
         {
-            if (File.Exists(ruleFileName(rule.RuleId)))
+            var mostUpdatedJob = await GetById(jobId);
+            if (mostUpdatedJob == null)
             {
-                File.Delete(ruleFileName(rule.RuleId));
+                return ChangeType.Deleted;
+            }
+            return mostUpdatedJob.Etag != etag ? ChangeType.Changed : ChangeType.NotChanged;
+        }
+        public Task<Job<JobCustomData>> Upsert(Job<JobCustomData> rule)
+        {
+            if (File.Exists(ruleFileName(rule.Id)))
+            {
+                File.Delete(ruleFileName(rule.Id));
             }
             rule.Etag = Guid.NewGuid().ToString();
             rule.JobDefinitionChangeTime = DateTime.UtcNow;
-            File.WriteAllText(ruleFileName(rule.RuleId), JsonSerializer.Serialize(rule));
+            File.WriteAllText(ruleFileName(rule.Id), JsonSerializer.Serialize(rule));
             return Task.FromResult(rule);
         }
         private string ruleFileName(string ruleId) => $"{_folder}/{ruleId}.rule";

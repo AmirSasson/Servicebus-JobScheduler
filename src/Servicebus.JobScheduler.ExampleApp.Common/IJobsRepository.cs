@@ -1,4 +1,3 @@
-using Servicebus.JobScheduler.ExampleApp.Messages;
 using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Common

@@ -2,9 +2,9 @@ using System;
 
 namespace Servicebus.JobScheduler.Core.Contracts
 {
-    public class RetryPolicy<TTopics>
+    public class RetryPolicy
     {
-        public TTopics PermanentErrorsTopic { get; set; }
+        public string PermanentErrorsTopic { get; set; }
         public IRetryDefination RetryDefinition { get; set; }
 
         public TimeSpan GetDelay(int retriesCount)

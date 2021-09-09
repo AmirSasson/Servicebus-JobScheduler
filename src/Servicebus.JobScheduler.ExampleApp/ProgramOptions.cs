@@ -13,13 +13,10 @@ namespace Servicebus.JobScheduler.ExampleApp
         public bool? RunAll { get; set; }
 
         [Option('m', "modes", Required = false, HelpText = "Run Subscriptions modes, default is ALL, setting this option will overrides the 'all-modes' option")]
-        public IEnumerable<Subscriptions> Modes { get; set; }
+        public IEnumerable<string> Modes { get; set; }
 
         [Option('t', "tester-simulator", HelpText = "Run Tester simulator to generate upserts", Default = true)]
         public bool? RunSimulator { get; set; }
-
-        [Option('s', "run-setup", HelpText = "Run Service bus setup", Default = true)]
-        public bool? SetupServiceBus { get; set; }
 
         [Option('e', "error-rate", HelpText = "Handlers Error simulation rate (percents)", Default = -1)]
         public int HandlingErrorRate { get; set; }
@@ -31,7 +28,7 @@ namespace Servicebus.JobScheduler.ExampleApp
         public bool? LocalServiceBus { get; set; }
 
         [Option('x', "execute-error-rate", HelpText = "Handlers Error simulation rate (percents)", Default = -1)]
-        public int ExecErrorRate { get;  set; }
+        public int ExecErrorRate { get; set; }
 
         public string GetDescription()
         {
@@ -42,13 +39,19 @@ namespace Servicebus.JobScheduler.ExampleApp
             return JsonSerializer.Serialize(this, options);
         }
 
-        public bool ShouldRunMode(Subscriptions subscription)
+        public bool ShouldRunMode(Subscriptions subscription) => ShouldRun(subscription.ToString());
+
+        private bool ShouldRun(string mode)
         {
             if (Modes.Any())
             {
-                return Modes.Any() && Modes.Contains(subscription);
+                return Modes.Any() && Modes.Contains(mode);
             }
             return RunAll == true;
         }
+
+        internal bool ShouldSchedulingWorkers() => ShouldRun("scheduling");
+
+        internal bool ShouldRunJobExecution() => ShouldRun("executing");
     }
 }

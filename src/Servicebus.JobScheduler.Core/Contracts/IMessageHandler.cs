@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.Core.Contracts
 {
-    public interface IMessageHandler<TTopics, TMessageType> where TTopics : struct, Enum where TMessageType : class, IBaseMessage
+    public interface IMessageHandler<TMessageType> where TMessageType : class, IJob
     {
-        Task<HandlerResponse<TTopics>> Handle(TMessageType msg);
+        Task<HandlerResponse> Handle(TMessageType msg);
     }
 }

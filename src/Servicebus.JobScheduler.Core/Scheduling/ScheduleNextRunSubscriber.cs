@@ -1,33 +1,31 @@
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
-using Servicebus.JobScheduler.ExampleApp.Messages;
 using System;
 using System.Threading.Tasks;
 
-namespace Servicebus.JobScheduler.ExampleApp.Handlers
+namespace Servicebus.JobScheduler.Core
 {
-    public class ScheduleNextRunSubscriber : BaseSimulatorHandler<JobDefinition>
+    internal class ScheduleNextRunSubscriber<TJobPayload> : IMessageHandler<Job<TJobPayload>>
     {
         private readonly ILogger _logger;
 
-        public ScheduleNextRunSubscriber(ILogger<ScheduleNextRunSubscriber> logger, int simulateFailurePercents)
-        : base(simulateFailurePercents, TimeSpan.Zero, logger)
+        public ScheduleNextRunSubscriber(ILogger<ScheduleNextRunSubscriber<TJobPayload>> logger)
         {
             _logger = logger;
         }
 
-        protected override Task<HandlerResponse<Topics>> handlePrivate(JobDefinition msg)
+        public Task<HandlerResponse> Handle(Job<TJobPayload> msg)
         {
             var shouldScheduleNextWindow = msg.Schedule.PeriodicJob;
             _logger.LogInformation($"handling JobDefinition should reschedule for later: {shouldScheduleNextWindow}");
             if (shouldScheduleNextWindow)
             {
                 var nextJob = publishWindowReady(msg);
-                JobWindow job = nextJob.ContinueWithResult.Message as JobWindow;
+                JobWindow<TJobPayload> job = nextJob.ContinueWithResult.Message as JobWindow<TJobPayload>;
                 _logger.LogInformation($"Scheduling Next window: {job.FromTime} -> {job.ToTime} -> executed on {nextJob.ContinueWithResult.ExecuteOnUtc}");
                 return nextJob.AsTask();
             }
-            return HandlerResponse<Topics>.FinalOkAsTask;
+            return HandlerResponse.FinalOkAsTask;
         }
 
         /// <summary>
@@ -37,33 +35,30 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         /// <param name="executionDelay">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <param name="runInIntervals">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <returns></returns>
-        private HandlerResponse<Topics> publishWindowReady(JobDefinition msg, bool runInIntervals = true)
+        private HandlerResponse publishWindowReady(Job<TJobPayload> msg, bool runInIntervals = true)
         {
             (DateTime? nextWindowFromTime, DateTime? nextWindowToTime) = msg.Schedule.GetNextScheduleWindowTimeRange(msg.LastRunWindowUpperBound);
 
             if (nextWindowToTime.HasValue)
             {
-                var window = new JobWindow //TODO: Auto mapper
+                var window = new JobWindow<TJobPayload> //TODO: Auto mapper
                 {
                     Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
-                    //WindowTimeRangeSeconds = msg.WindowTimeRangeSeconds,
-                    Name = "",
+                    Payload = msg.Payload,
                     RuleId = msg.RuleId,
                     Schedule = msg.Schedule,
                     FromTime = nextWindowFromTime.Value,
                     ToTime = nextWindowToTime.Value,
                     Etag = msg.Etag,
-                    RunId = msg.RunId,
                     LastRunWindowUpperBound = nextWindowToTime.Value,
                     JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
                     Status = msg.Status,
-                    BehaviorMode = msg.BehaviorMode,
                     SkipNextWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
                 };
                 var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
-                return new HandlerResponse<Topics> { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse<Topics>.ContinueWith { Message = window, TopicToPublish = Topics.ReadyToRunJobWindow, ExecuteOnUtc = window.ToTime.Add(executionDelay) } };
+                return new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = window, TopicToPublish = SchedulingTopics.ReadyToRunJobWindow.ToString(), ExecuteOnUtc = window.ToTime.Add(executionDelay) } };
             }
-            return HandlerResponse<Topics>.FinalOk;
+            return HandlerResponse.FinalOk;
         }
     }
 }

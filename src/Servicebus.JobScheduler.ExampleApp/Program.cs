@@ -2,12 +2,11 @@ using CommandLine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-using Servicebus.JobScheduler.Core.Bus;
+using Servicebus.JobScheduler.Core;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.ExampleApp.Common;
 using Servicebus.JobScheduler.ExampleApp.Emulators;
 using Servicebus.JobScheduler.ExampleApp.Handlers;
-using Servicebus.JobScheduler.ExampleApp.Messages;
 using System;
 using System.Linq;
 using System.Runtime.Loader;
@@ -17,6 +16,8 @@ namespace Servicebus.JobScheduler.ExampleApp
 {
     class Program
     {
+        private static IJobScheduler<JobCustomData> _scheduler;
+
         static async Task<int> Main(string[] args)
         {
             return await Parser.Default.ParseArguments<ProgramOptions>(args)
@@ -111,131 +112,54 @@ namespace Servicebus.JobScheduler.ExampleApp
             cts.Dispose();
         }
 
-        private static async Task<IAsyncDisposable> startAppWithOptions(ProgramOptions o, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
+        private static async Task<IAsyncDisposable> startAppWithOptions(ProgramOptions options, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
         {
-            setConsoleTitle(o);
+            setConsoleTitle(options);
 
-            logger.LogDebug($"Starting app.. with options: {o.GetDescription()}");
+            logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
+            var db = new SimpleFilePerJobDefinitionRepository($"db_{options.RunId}");
 
-            IMessageBus<Topics, Subscriptions> bus;
-            if (o.LocalServiceBus == true)
-            {
-                logger.LogCritical("Running with local in mem Service bus mock");
-                bus = new InMemoryMessageBus<Topics, Subscriptions>(loggerFactory.CreateLogger<InMemoryMessageBus<Topics, Subscriptions>>());
-            }
-            else
-            {
-                bus = new AzureServiceBusService<Topics, Subscriptions>(config, loggerFactory.CreateLogger<AzureServiceBusService<Topics, Subscriptions>>(), o.RunId);
-            }
+            var builder = new JobSchedulerBuilder<JobCustomData>()
+                .UseLoggerFactory(loggerFactory)
+                .UseSchedulingWorker(options.ShouldSchedulingWorkers())
+                .WithCancelationSource(source)
+                .WithConfiguration(config)
+                .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
+                .AddMainJobExecuter(
+                    new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
+                    concurrencyLevel: 3,
+                    new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
+                    enabled: options.ShouldRunJobExecution())
+                .AddSubJobHandler(
+                    Topics.JobWindowConditionMet.ToString(),
+                    Subscriptions.JobWindowConditionMet_Publish.ToString(),
+                    new PublishJobResultsSubscriber(loggerFactory.CreateLogger<PublishJobResultsSubscriber>(), options.RunId, simulateFailurePercents: options.HandlingErrorRate),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionMet_Publish))
+                .AddSubJobHandler(
+                    Topics.JobWindowConditionMet.ToString(),
+                    Subscriptions.JobWindowConditionMet_Suppress.ToString(),
+                    new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: options.HandlingErrorRate),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionMet_Suppress))
+                .AddSubJobHandler(
+                    Topics.JobWindowConditionNotMet.ToString(),
+                    Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay.ToString(),
+                    new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
+                .WithJobChangeProvider(db);
 
-            IRepository<JobDefinition> db = new SimpleFilePerJobDefinitionRepository($"db_{o.RunId}");
-            var token = source.Token;
-
-            if (o.SetupServiceBus == true)
-            {
-                await bus.SetupEntitiesIfNotExist(config);
-            }
-
-            await buildTopicFlowTree(o, loggerFactory, source, bus, db);
-
-
+            _scheduler = await builder.BuildAsync();
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            if (o.RunSimulator == true)
+            if (options.RunSimulator == true)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                UpsertsClientSimulator.Run(bus, initialRuleCount: 1, delayBetweenUpserts: TimeSpan.FromSeconds(1500), maxConcurrentRules: 250, runId: o.RunId, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(2), token);
+                UpsertsClientSimulator.Run(_scheduler, initialRuleCount: 1, delayBetweenUpserts: TimeSpan.FromSeconds(1500), maxConcurrentRules: 250, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(2), source.Token);
             }
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            return bus;
-        }
-
-        /// <summary>
-        /// this build the topic tree described in the TopicFLow.vsdx
-        /// </summary>
-        /// <param name="o">the options</param>
-        /// <param name="loggerFactory">logger Factory</param>
-        /// <param name="source">app Cancellation Token Source</param>
-        /// <param name="bus">message bus refrence</param>
-        /// <param name="db"></param>
-        /// <returns></returns>
-        private static async Task buildTopicFlowTree(ProgramOptions o, ILoggerFactory loggerFactory, CancellationTokenSource source, IMessageBus<Topics, Subscriptions> bus, IRepository<JobDefinition> db)
-        {
-            if (o.ShouldRunMode(Subscriptions.JobDefinitionChange_ImmediateScheduleRule))
-            {
-                await bus.RegisterSubscriber(
-                   Topics.JobDefinitionChange,
-                   Subscriptions.JobDefinitionChange_ImmediateScheduleRule,
-                   concurrencyLevel: 3,
-                   new ScheduleNextRunSubscriber(loggerFactory.CreateLogger<ScheduleNextRunSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
-                   null,
-                   source);
-            }
-
-            if (o.ShouldRunMode(Subscriptions.ReadyToRunJobWindow_Validation))
-            {
-                await bus.RegisterSubscriber(
-                   Topics.ReadyToRunJobWindow,
-                   Subscriptions.ReadyToRunJobWindow_Validation,
-                   concurrencyLevel: 3,
-                   new WindowValidatorSubscriber(loggerFactory.CreateLogger<WindowValidatorSubscriber>(), db, o.RunId, simulateFailurePercents: o.HandlingErrorRate),
-                   new RetryPolicy<Topics> { PermanentErrorsTopic = Topics.PermanentErrors, RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
-                   source);
-            }
-
-            if (o.ShouldRunMode(Subscriptions.JobWindowValid_RuleTimeWindowExecution))
-            {
-                await bus.RegisterSubscriber(
-                Topics.JobWindowValid,
-                Subscriptions.JobWindowValid_RuleTimeWindowExecution,
-                concurrencyLevel: 3,
-                new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), o.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
-                new RetryPolicy<Topics> { PermanentErrorsTopic = Topics.PermanentErrors, RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
-                source);
-            }
-
-            if (o.ShouldRunMode(Subscriptions.JobWindowValid_ScheduleNextRun))
-            {
-                await bus.RegisterSubscriber(
-                    Topics.JobWindowValid,
-                    Subscriptions.JobWindowValid_ScheduleNextRun,
-                    concurrencyLevel: 3,
-                    new ScheduleNextRunSubscriber(loggerFactory.CreateLogger<ScheduleNextRunSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
-                    null,
-                    source);
-            }
-
-            if (o.ShouldRunMode(Subscriptions.JobWindowConditionMet_Publish))
-            {
-                await bus.RegisterSubscriber(
-                   Topics.JobWindowConditionMet,
-                   Subscriptions.JobWindowConditionMet_Publish,
-                   concurrencyLevel: 1,
-                   new JobResultPublishingSubscriber(loggerFactory.CreateLogger<JobResultPublishingSubscriber>(), o.RunId, simulateFailurePercents: o.HandlingErrorRate),
-                    null,
-                   source);
-            }
-
-            if (o.ShouldRunMode(Subscriptions.JobWindowConditionMet_Suppress))
-            {
-                await bus.RegisterSubscriber(
-                   Topics.JobWindowConditionMet,
-                   Subscriptions.JobWindowConditionMet_Suppress,
-                   concurrencyLevel: 1,
-                   new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
-                   null,
-                   source);
-            }
-            if (o.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
-            {
-                await bus.RegisterSubscriber(
-                   Topics.JobWindowConditionNotMet,
-                   Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay,
-                   concurrencyLevel: 3,
-                   new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: o.HandlingErrorRate),
-                   null,
-                   source);
-            }
+            return _scheduler;
         }
 
         private static void setConsoleTitle(ProgramOptions o)

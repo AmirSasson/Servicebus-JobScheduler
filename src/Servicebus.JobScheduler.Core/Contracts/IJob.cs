@@ -1,14 +1,16 @@
 namespace Servicebus.JobScheduler.Core.Contracts.Messages
 {
-    public class BaseMessage : IBaseMessage
+    public abstract class BaseJob : IJob
     {
         public string Id { get; set; }
-        public string RunId { get; set; }
+
+        public string Etag { get; set; }
     }
 
-    public interface IBaseMessage
+    public interface IJob
     {
         string Id { get; }
-        string RunId { get; }
+        string Etag { get; }
+
     }
 }
