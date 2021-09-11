@@ -71,7 +71,7 @@ see TopicsFlow.vsdx visio file for logical flow
 ### deploy (cloud)
 currently this app is running as a linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
 
-### use as consumer
+## Use as consumer
 typical job execution workflow
 ```csharp
             var builder = new JobSchedulerBuilder<JobCustomData>()
