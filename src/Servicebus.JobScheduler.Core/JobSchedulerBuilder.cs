@@ -21,10 +21,10 @@ namespace Servicebus.JobScheduler.Core
         private IConfiguration _config;
         private bool _initiateSchedulingWorkers = true;
         private CancellationTokenSource _source;
-        private IJobChangeProvider _changeProvider;
+        private IJobChangeProvider _changeProvider = new EmptyChangeProvider();
         private List<Action> _preBuildActions = new();
         private List<Func<JobScheduler<TJobPayload>, Task>> _buildTasks = new();
-
+        private IServiceProvider _serviceProvider;
         private readonly HashSet<string> _topics = Enum.GetNames<SchedulingTopics>().ToHashSet();
         private readonly HashSet<string> _subscriptions = Enum.GetNames<SchedulingSubscriptions>().ToHashSet();
 
@@ -56,9 +56,15 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> WithJobChangeProvider(IJobChangeProvider changeProvider)
+        public JobSchedulerBuilder<TJobPayload> UseJobChangeProvider(IJobChangeProvider changeProvider)
         {
             _changeProvider = changeProvider;
+            return this;
+        }
+
+        public JobSchedulerBuilder<TJobPayload> WithHandlersServiceProvider(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
             return this;
         }
 
@@ -73,7 +79,7 @@ namespace Servicebus.JobScheduler.Core
                 action();
             }
 
-            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>());
+            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
             var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
 
             await scheduler.SetupEntities(_config, _topics, _subscriptions);
@@ -112,6 +118,28 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
+        public JobSchedulerBuilder<TJobPayload> AddMainJobExecuterType<THandler>(int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
+            where THandler : IMessageHandler<JobWindow<TJobPayload>>
+        {
+            if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
+            {
+                _topics.Add(retryPolicy.PermanentErrorsTopic);
+            }
+            if (enabled)
+            {
+                _buildTasks.Add(async (_) =>
+                {
+                    await _pubSubProvider.RegisterSubscriberType<JobWindow<TJobPayload>, THandler>(
+                        SchedulingTopics.JobWindowValid.ToString(),
+                        SchedulingSubscriptions.JobWindowValid_RuleTimeWindowExecution.ToString(),
+                        concurrencyLevel: 3,
+                        retryPolicy,
+                        _source);
+                });
+            }
+            return this;
+        }
+
         public JobSchedulerBuilder<TJobPayload> AddSubJobHandler<TMessageType>(string topic, string sub, IMessageHandler<TMessageType> handler, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true) where TMessageType : class, IJob
         {
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
@@ -136,6 +164,31 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
+        public JobSchedulerBuilder<TJobPayload> AddSubJobHandlerType<TMessageType, THandler>(string topic, string sub, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true)
+            where TMessageType : class, IJob
+            where THandler : IMessageHandler<TMessageType>
+        {
+            if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
+            {
+                _topics.Add(retryPolicy.PermanentErrorsTopic);
+            }
+            _topics.Add(topic);
+            _subscriptions.Add(sub);
+            if (enabled)
+            {
+                _buildTasks.Add(async (_) =>
+                {
+                    await _pubSubProvider.RegisterSubscriberType<TMessageType, THandler>(
+                        topic,
+                        sub,
+                        concurrencyLevel,
+                        retryPolicy,
+                        _source);
+                });
+            }
+            return this;
+        }
+
         public JobSchedulerBuilder<TJobPayload> UseInMemoryPubsubProvider(bool use)
         {
             if (use)
@@ -143,7 +196,7 @@ namespace Servicebus.JobScheduler.Core
                 _preBuildActions.Add(() =>
                 {
                     _logger.CreateLogger("Init").LogCritical("Running with local in mem Service bus mock");
-                    _pubSubProvider = new InMemoryMessageBus(_logger.CreateLogger<InMemoryMessageBus>());
+                    _pubSubProvider = new InMemoryMessageBus(_logger.CreateLogger<InMemoryMessageBus>(), _serviceProvider);
                 });
             }
             return this;

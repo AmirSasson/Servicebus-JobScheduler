@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.ExampleApp.Handlers
 {
-    public class PublishJobResultsSubscriber : BaseSimulatorHandler<JobOutput>
+    public class PublishJobResultsSubscriber : BaseSimulatorHandler<JobOutput>, IDisposable
     {
         private readonly ILogger _logger;
         private readonly string _runId;
@@ -23,6 +23,12 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
                 File.AppendAllLines($"Joboutputs.{_runId}.csv", new[] { "OutputId,RuleId,TimeGenerated,WindowUpperBoundEpoch,WindowId" });
             }
         }
+
+        public void Dispose()
+        {
+            _logger.LogWarning($"Disposing PublishJobResultsSubscriber !");
+        }
+
         protected override Task<HandlerResponse> handlePrivate(JobOutput msg)
         {
             _logger.LogWarning($"***********************************************");

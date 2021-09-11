@@ -85,7 +85,8 @@ typical job execution workflow
                 .WithJobChangeProvider(db);
             _scheduler = await builder.Build();
 ```
-see example app for more complex options
+
+see example (https://github.com/AmirSasson/Servicebus-JobScheduler/blob/5cbc5449e69515a1ea1d85cfef0b56bf7cd06517/src/Servicebus.JobScheduler.ExampleApp/Program.cs)[programs.cs] for more complex options such as Dependency injection that provides scoping per job, and other options
 
 ### <a id="scheduling"></a>Scheduling jobs ###
 jobs can be scheduled in 3 different methods:

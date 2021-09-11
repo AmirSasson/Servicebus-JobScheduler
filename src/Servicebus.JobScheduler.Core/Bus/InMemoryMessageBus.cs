@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
@@ -19,14 +20,17 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
         {
         }
         readonly Dictionary<string, IList> _eventHandlers = new();
+        private readonly IServiceProvider _serviceProvider = null;
+
         private readonly ILogger _logger;
 
-        public InMemoryMessageBus(ILogger logger)
+        public InMemoryMessageBus(ILogger logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
-        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null, string corraltionId = null)
         {
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
@@ -64,12 +68,42 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
         {
             _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
 
-            if (!_eventHandlers.TryGetValue(subscription, out var subs))
+            if (!_eventHandlers.TryGetValue(subscription, out var subscribers))
             {
-                subs = new List<IMessageHandler<TMessage>>();
+                subscribers = new List<Func<TMessage, Task<HandlerResponse>>>();
             }
-            subs.Add(handler);
-            _eventHandlers[subscription] = subs;
+
+            Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
+            {
+                return await handler.Handle(msg as TMessage);
+            };
+
+            subscribers.Add(handlingFunction);
+
+            _eventHandlers[subscription] = subscribers;
+            return Task.FromResult(true);
+        }
+
+        Task<bool> IMessageBus.RegisterSubscriberType<TMessage, THandler>(string topic, string subscription, int concurrencyLevel, RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+        {
+            _logger.LogInformation($"Registering {typeof(THandler).Name} Subscriber to: {topic}:{subscription}");
+
+            if (!_eventHandlers.TryGetValue(subscription, out var subscribers))
+            {
+                subscribers = new List<Func<TMessage, Task<HandlerResponse>>>();
+            }
+
+            Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
+            {
+                using var handlerScope = _serviceProvider.CreateScope();
+
+                var handler = handlerScope.ServiceProvider.GetService<THandler>();
+
+                return await handler.Handle(msg as TMessage);
+            };
+
+            subscribers.Add(handlingFunction);
+            _eventHandlers[subscription] = subscribers;
             return Task.FromResult(true);
         }
 
@@ -87,11 +121,12 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
             {
                 if (eventHandlersKvp.Key.ToString().Contains(topic.ToString(), StringComparison.InvariantCultureIgnoreCase))
                 {
-                    foreach (var h in eventHandlersKvp.Value)
+                    foreach (var handlerFunction in eventHandlersKvp.Value)
                     {
-                        _logger.LogInformation($"Incoming {topic}:{eventHandlersKvp.Key}/{msg.Id} [{msg.GetType().Name}] delegate to {h.GetType().Name}");
+                        _logger.LogInformation($"Incoming {topic}:{eventHandlersKvp.Key}/{msg.Id} [{msg.GetType().Name}] delegate to {handlerFunction.GetType().Name}");
 
-                        var handleMethod = h.GetType().GetMethod(nameof(IMessageHandler<DummyMessage>.Handle));
+                        //var handleMethod = handlerFunction.GetType().GetMethod(nameof(IMessageHandler<DummyMessage>.Handle));
+                        var handleMethod = handlerFunction as Func<object, Task<HandlerResponse>>;
 
                         var retries = 0;
                         var success = false;
@@ -99,11 +134,12 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                         {
                             try
                             {
-                                var task = handleMethod.Invoke(h, new[] { msg });
-                                var handlerResult = (task as Task<HandlerResponse>);
-                                var result = await handlerResult;
+                                // var task = handleMethod.Invoke(handlerFunction, new[] { msg });
+                                var result = await handleMethod(msg);
+                                //var handlerResult = (task as Task<HandlerResponse>);
+                                //var result = await handlerResult;
                                 success = true;
-                                _logger.LogInformation($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
+                                _logger.LogInformation($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
 
                                 if (result.ContinueWithResult != null)
                                 {
@@ -111,14 +147,14 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                                 }
                                 else
                                 {
-                                    _logger.LogWarning($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Got to its final stage!! ");
+                                    _logger.LogWarning($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Got to its final stage!! ");
 
                                 }
                             }
                             catch (System.Exception e)
                             {
                                 retries++;
-                                _logger.LogError($"[{h.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
+                                _logger.LogError($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
                             }
                         }
                     };

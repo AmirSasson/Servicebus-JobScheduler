@@ -1,5 +1,7 @@
 using CommandLine;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Servicebus.JobScheduler.Core;
@@ -28,7 +30,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                   ILogger logger = loggerFactory.CreateLogger("System");
 
                   var (done, cts) = configureServer(logger);
-                  var engine = await startAppWithOptions(o, loggerFactory, logger, config, cts);
+                  var engine = await startAppWithOptionsWithDependencyInjection(o, loggerFactory, logger, config, cts);
                   blockTillTermination(engine, done, cts);
                   return 0;
               },
@@ -112,9 +114,68 @@ namespace Servicebus.JobScheduler.ExampleApp
             cts.Dispose();
         }
 
+        private static async Task<IAsyncDisposable> startAppWithOptionsWithDependencyInjection(ProgramOptions options, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
+        {
+            setConsoleTitle(options);
+
+            var db = new SimpleFilePerJobDefinitionRepository($"db_{options.RunId}");
+
+            var host = Host.CreateDefaultBuilder()
+                        .ConfigureServices((_, services) =>
+                        {
+                            services.AddScoped<WindowExecutionSubscriber>((services) => new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)));
+                            services.AddScoped<PublishJobResultsSubscriber>((services) => new PublishJobResultsSubscriber(loggerFactory.CreateLogger<PublishJobResultsSubscriber>(), options.RunId, simulateFailurePercents: options.HandlingErrorRate));
+                            services.AddScoped<RuleSupressorSubscriber>((services) => new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: options.HandlingErrorRate));
+                            services.AddScoped<ScheduleIngestionDelayExecutionSubscriber>((services) => new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)));
+                        })
+                        .Build();
+
+            logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
+
+            var builder = new JobSchedulerBuilder<JobCustomData>()
+                .UseLoggerFactory(loggerFactory)
+                .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
+                .WithCancelationSource(source)
+                .WithConfiguration(config)
+                .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
+                .AddMainJobExecuterType<WindowExecutionSubscriber>(
+                    concurrencyLevel: 3,
+                    new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
+                    enabled: options.ShouldRunJobExecution())
+                .WithHandlersServiceProvider(host.Services)
+                .AddSubJobHandlerType<Messages.JobOutput, PublishJobResultsSubscriber>(
+                    Topics.JobWindowConditionMet.ToString(),
+                    Subscriptions.JobWindowConditionMet_Publish.ToString(),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionMet_Publish))
+                .AddSubJobHandlerType<Messages.JobOutput, RuleSupressorSubscriber>(
+                    Topics.JobWindowConditionMet.ToString(),
+                    Subscriptions.JobWindowConditionMet_Suppress.ToString(),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionMet_Suppress))
+                .AddSubJobHandlerType<Messages.JobWindowExecutionContext, ScheduleIngestionDelayExecutionSubscriber>(
+                    Topics.JobWindowConditionNotMet.ToString(),
+                    Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay.ToString(),
+                    concurrencyLevel: 1,
+                    enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
+                .UseJobChangeProvider(db);
+
+            _scheduler = await builder.BuildAsync();
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            if (options.RunSimulator == true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                UpsertsClientSimulator.Run(_scheduler, initialRuleCount: 1, delayBetweenUpserts: TimeSpan.FromSeconds(1500), maxConcurrentRules: 250, db, logger, maxUpserts: 1, ruleInterval: TimeSpan.FromMinutes(2), source.Token);
+            }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            return _scheduler;
+        }
+
         private static async Task<IAsyncDisposable> startAppWithOptions(ProgramOptions options, ILoggerFactory loggerFactory, ILogger logger, IConfiguration config, CancellationTokenSource source)
         {
             setConsoleTitle(options);
+
 
             logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
             var db = new SimpleFilePerJobDefinitionRepository($"db_{options.RunId}");
@@ -148,7 +209,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                     new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)),
                     concurrencyLevel: 1,
                     enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
-                .WithJobChangeProvider(db);
+                .UseJobChangeProvider(db);
 
             _scheduler = await builder.BuildAsync();
 
