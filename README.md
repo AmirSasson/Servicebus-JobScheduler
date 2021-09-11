@@ -86,7 +86,7 @@ typical job execution workflow
             _scheduler = await builder.Build();
 ```
 
-see example [Program.cs](https://github.com/AmirSasson/Servicebus-JobScheduler/blob/main/src/Servicebus.JobScheduler.ExampleApp/Program.cs) for more complex options such as Dependency injection that provides scoping per job, and other options
+see example [Program.cs](https://github.com/AmirSasson/Servicebus-JobScheduler/blob/6b84f19151dbeff12e38eb22cd46c3f3edf13ba8/src/Servicebus.JobScheduler.ExampleApp/Program.cs#L117) for more complex options such as Dependency injection that provides scoping per job, and other options
 
 ### <a id="scheduling"></a>Scheduling jobs ###
 jobs can be scheduled in 3 different methods:
