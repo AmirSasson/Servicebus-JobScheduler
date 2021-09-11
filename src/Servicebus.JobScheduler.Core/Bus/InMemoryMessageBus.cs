@@ -24,9 +24,10 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
         private readonly ILogger _logger;
 
-        public InMemoryMessageBus(ILogger logger)
+        public InMemoryMessageBus(ILogger logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)

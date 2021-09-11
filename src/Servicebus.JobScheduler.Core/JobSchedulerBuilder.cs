@@ -196,7 +196,7 @@ namespace Servicebus.JobScheduler.Core
                 _preBuildActions.Add(() =>
                 {
                     _logger.CreateLogger("Init").LogCritical("Running with local in mem Service bus mock");
-                    _pubSubProvider = new InMemoryMessageBus(_logger.CreateLogger<InMemoryMessageBus>());
+                    _pubSubProvider = new InMemoryMessageBus(_logger.CreateLogger<InMemoryMessageBus>(), _serviceProvider);
                 });
             }
             return this;
