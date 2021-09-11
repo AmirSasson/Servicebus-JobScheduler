@@ -38,7 +38,7 @@ namespace Servicebus.JobScheduler.Core.Bus
             _serviceProvider = serviceProvider;
         }
 
-        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null, string correlationId = null)
         {
             var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
             try
@@ -48,7 +48,8 @@ namespace Servicebus.JobScheduler.Core.Bus
                     MessageId = msg.Id,
                     ContentType = "application/json",
                     Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType())),
-                    PartitionKey = msg.Id
+                    PartitionKey = msg.Id,
+                    CorrelationId = correlationId ?? Guid.NewGuid().ToString()
                 };
                 if (executeOnUtc.HasValue)
                 {
@@ -122,12 +123,13 @@ namespace Servicebus.JobScheduler.Core.Bus
                     var str = Encoding.UTF8.GetString(msg.Body);
                     var obj = str.FromJson<TMessage>();
 
+                    using var ls = _logger.BeginScope("[{CorrelationId}]", msg.CorrelationId ?? $"{topic}:{subscription}/{obj.Id}");
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handlerName}");
 
                     var handlerResponse = await handlingFunction(obj);
                     if (handlerResponse.ContinueWithResult != null)
                     {
-                        await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc);
+                        await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc, msg.CorrelationId);
                     }
 
                     _logger.LogInformation($"[{handlerName}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");

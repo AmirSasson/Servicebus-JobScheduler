@@ -30,7 +30,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
             _serviceProvider = serviceProvider;
         }
 
-        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
+        public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null, string corraltionId = null)
         {
             var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
 
