@@ -14,16 +14,19 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace Servicebus.JobScheduler.Core.Bus
 {
     public class AzureServiceBusService : IMessageBus
     {
         private readonly ILogger _logger;
+        private readonly IServiceProvider _serviceProvider;
         private readonly string _connectionString;
         private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new();
 
-        public AzureServiceBusService(IConfiguration config, ILogger logger)
+        public AzureServiceBusService(IConfiguration config, ILogger logger, IServiceProvider serviceProvider)
         {
             _connectionString = config.GetValue<string>("ServiceBus:ConnectionString");
             if (string.IsNullOrEmpty(_connectionString))
@@ -32,6 +35,7 @@ namespace Servicebus.JobScheduler.Core.Bus
             }
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+            _serviceProvider = serviceProvider;
         }
 
         public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null)
@@ -65,6 +69,34 @@ namespace Servicebus.JobScheduler.Core.Bus
         public async Task<bool> RegisterSubscriber<TMessage>(string topic, string subscription, int concurrencyLevel, IMessageHandler<TMessage> handler, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
             where TMessage : class, IJob
         {
+            Func<TMessage, Task<HandlerResponse>> handlingFunction = async (TMessage msg) =>
+            {
+                return await handler.Handle(msg);
+            };
+            return await registerSubscriberPrivate(topic, subscription, handler.GetType().Name, handlingFunction, concurrencyLevel, deadLetterRetrying, source);
+        }
+
+
+        public async Task<bool> RegisterSubscriberType<TMessage, THandler>(string topic, string subscription, int concurrencyLevel, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+            where TMessage : class, IJob
+            where THandler : IMessageHandler<TMessage>
+        {
+
+            Func<TMessage, Task<HandlerResponse>> handlingFunction = async (TMessage msg) =>
+            {
+                using var handlerScope = _serviceProvider.CreateScope();
+
+                var handler = handlerScope.ServiceProvider.GetService<THandler>();
+
+                return await handler.Handle(msg);
+            };
+            return await registerSubscriberPrivate(topic, subscription, typeof(THandler).Name, handlingFunction, concurrencyLevel, deadLetterRetrying, source);
+        }
+
+
+        private async Task<bool> registerSubscriberPrivate<TMessage>(string topic, string subscription, string handlerName, Func<TMessage, Task<HandlerResponse>> handlingFunction, int concurrencyLevel, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+                 where TMessage : class, IJob
+        {
             var subscriptionClient = _clientEntities.GetOrAdd(
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
                 (_) =>
@@ -83,23 +115,22 @@ namespace Servicebus.JobScheduler.Core.Bus
                 await startDeadLetterRetryEngine(topic, subscription, source, deadLetterRetrying);//permanentErrorsTopic.Value, new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
-
-            _logger.LogInformation($"Registering {handler.GetType().Name} Subscriber to: {topic}:{subscription}");
+            _logger.LogInformation($"Registering {handlerName} Subscriber to: {topic}:{subscription}");
             subscriptionClient.RegisterMessageHandler(
                 async (msg, cancel) =>
                 {
                     var str = Encoding.UTF8.GetString(msg.Body);
                     var obj = str.FromJson<TMessage>();
 
-                    _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handler.GetType().Name}");
+                    _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handlerName}");
 
-                    var handlerResponse = await handler.Handle(obj);
+                    var handlerResponse = await handlingFunction(obj);
                     if (handlerResponse.ContinueWithResult != null)
                     {
                         await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc);
                     }
 
-                    _logger.LogInformation($"[{handler.GetType().Name}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
+                    _logger.LogInformation($"[{handlerName}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
                 },
                 new MessageHandlerOptions(
                     args =>
@@ -114,11 +145,6 @@ namespace Servicebus.JobScheduler.Core.Bus
             );
 
             return true;
-        }
-
-        private void PublishAsync(BaseJob message, string topicToPublish, object executeOnUtc)
-        {
-            throw new NotImplementedException();
         }
 
         private async Task startDeadLetterRetryEngine(string retriesTopic, string subscription, CancellationTokenSource source, Contracts.RetryPolicy retry)

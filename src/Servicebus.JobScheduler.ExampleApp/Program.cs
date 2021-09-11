@@ -148,7 +148,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                     new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)),
                     concurrencyLevel: 1,
                     enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
-                .WithJobChangeProvider(db);
+                .UseJobChangeProvider(db);
 
             _scheduler = await builder.BuildAsync();
 
