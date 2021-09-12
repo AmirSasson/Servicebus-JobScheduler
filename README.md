@@ -101,7 +101,7 @@ jobs can be scheduled in 3 different methods:
         Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = 120 },                   
       ....
     }
-    _sceduler.ScheduleJob(job);
+    _scheduler.ScheduleJob(job);
 ```
 
   1. **Cron Job scheduling** .in the below example, lets assume it was called on time `10:30:10`, the cron represents [At every 2nd minute](https://crontab.guru/#*/2_*_*_*_*)
@@ -114,7 +114,7 @@ jobs can be scheduled in 3 different methods:
         Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" },                  
       ....      
     }
-    _sceduler.ScheduleJob(job);
+    _scheduler.ScheduleJob(job);
 
 ```   
   OR you can schedule a cron job that will look on a specific lookback time window, in this example it would run every 2 minutes, and look back on a 1 hour (3600sec) time range, (overlapped time ranges)
@@ -125,7 +125,7 @@ jobs can be scheduled in 3 different methods:
         Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/2 * * * *" ,RunIntervalSeconds = 3600},                  
       ....      
     }
-     _sceduler.ScheduleJob(job);
+     _scheduler.ScheduleJob(job);
   ```   
      
   3. **adhoc runs of a predfeined time window**  
@@ -139,7 +139,7 @@ jobs can be scheduled in 3 different methods:
       LastRunWindowUpperBound = DateTime.Parse("12/28/2020 1:00:00 PM")        
     ....
   }
-   _sceduler.ScheduleJob(job);
+   _scheduler.ScheduleJob(job);
 ```
 
 #### dockerize:
