@@ -16,10 +16,12 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 {
     public class InMemoryMessageBus : IMessageBus
     {
-        class DummyMessage : BaseJob
+        class HandlerSubscription
         {
+            public string Name { get; set; }
+            public Func<object, Task<HandlerResponse>> HandlingFunc { get; set; }
         }
-        readonly Dictionary<string, IList> _eventHandlers = new();
+        readonly Dictionary<string, IList<HandlerSubscription>> _eventHandlers = new();
         private readonly IServiceProvider _serviceProvider = null;
 
         private readonly ILogger _logger;
@@ -70,7 +72,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
             if (!_eventHandlers.TryGetValue(subscription, out var subscribers))
             {
-                subscribers = new List<Func<TMessage, Task<HandlerResponse>>>();
+                subscribers = new List<HandlerSubscription>();
             }
 
             Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
@@ -78,7 +80,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 return await handler.Handle(msg as TMessage);
             };
 
-            subscribers.Add(handlingFunction);
+            subscribers.Add(new HandlerSubscription { Name = handler.GetType().Name, HandlingFunc = handlingFunction });
 
             _eventHandlers[subscription] = subscribers;
             return Task.FromResult(true);
@@ -90,7 +92,8 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
             if (!_eventHandlers.TryGetValue(subscription, out var subscribers))
             {
-                subscribers = new List<Func<TMessage, Task<HandlerResponse>>>();
+                subscribers = new List<HandlerSubscription>();
+
             }
 
             Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
@@ -101,8 +104,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
                 return await handler.Handle(msg as TMessage);
             };
-
-            subscribers.Add(handlingFunction);
+            subscribers.Add(new HandlerSubscription { Name = typeof(THandler).Name, HandlingFunc = handlingFunction });
             _eventHandlers[subscription] = subscribers;
             return Task.FromResult(true);
         }
@@ -123,10 +125,11 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 {
                     foreach (var handlerFunction in eventHandlersKvp.Value)
                     {
-                        _logger.LogInformation($"Incoming {topic}:{eventHandlersKvp.Key}/{msg.Id} [{msg.GetType().Name}] delegate to {handlerFunction.GetType().Name}");
+                        var handleSubscription = handlerFunction as HandlerSubscription;
+                        var subscription = eventHandlersKvp.Key;
+                        var handlerName = handleSubscription.Name;
 
-                        //var handleMethod = handlerFunction.GetType().GetMethod(nameof(IMessageHandler<DummyMessage>.Handle));
-                        var handleMethod = handlerFunction as Func<object, Task<HandlerResponse>>;
+                        _logger.LogInformation($"Incoming {topic}:{subscription}/{msg.Id} [{msg.GetType().Name}] delegate to {handlerName}");
 
                         var retries = 0;
                         var success = false;
@@ -134,12 +137,9 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                         {
                             try
                             {
-                                // var task = handleMethod.Invoke(handlerFunction, new[] { msg });
-                                var result = await handleMethod(msg);
-                                //var handlerResult = (task as Task<HandlerResponse>);
-                                //var result = await handlerResult;
+                                var result = await handleSubscription.HandlingFunc(msg);
                                 success = true;
-                                _logger.LogInformation($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
+                                _logger.LogInformation($"[{handlerName}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
 
                                 if (result.ContinueWithResult != null)
                                 {
@@ -147,14 +147,19 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                                 }
                                 else
                                 {
-                                    _logger.LogWarning($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Got to its final stage!! ");
+                                    _logger.LogWarning($"[{handlerName}] - [{msg.Id}] - [{topic}] Got to its final stage!! ");
 
                                 }
+                            }
+                            catch (ExecutionPermanentException e)
+                            {
+                                _logger.LogError($"{handlerName} Failed to handle {topic}:{subscription}/{msg.Id} [{msg.GetType().Name}] with  {e.GetType().Name} Error! {e}");
+                                return;
                             }
                             catch (System.Exception e)
                             {
                                 retries++;
-                                _logger.LogError($"[{handlerFunction.GetType().Name}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
+                                _logger.LogError($"[{handlerName}] - [{msg.Id}] - [{topic}] Handler Failed to handle msg on retry [{retries}] error: {e.Message} ");
                             }
                         }
                     };

@@ -125,14 +125,25 @@ namespace Servicebus.JobScheduler.Core.Bus
 
                     using var ls = _logger.BeginScope("[{CorrelationId}]", msg.CorrelationId ?? $"{topic}:{subscription}/{obj.Id}");
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handlerName}");
-
-                    var handlerResponse = await handlingFunction(obj);
-                    if (handlerResponse.ContinueWithResult != null)
+                    try
                     {
-                        await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc, msg.CorrelationId);
-                    }
+                        var handlerResponse = await handlingFunction(obj);
+                        if (handlerResponse.ContinueWithResult != null)
+                        {
+                            await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc, msg.CorrelationId);
+                        }
 
-                    _logger.LogInformation($"[{handlerName}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
+                        _logger.LogInformation($"[{handlerName}] - [{obj.Id}] retry {msg.SystemProperties.DeliveryCount} -receivedMsgCount: Handled success ");
+                    }
+                    catch (ExecutionPermanentException e)
+                    {
+                        _logger.LogError($"{handlerName} Failed to handle {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] with  {e.GetType().Name} Error! {e}");
+                        if (!string.IsNullOrEmpty(deadLetterRetrying?.PermanentErrorsTopic))
+                        {
+                            await PublishAsync(obj as BaseJob, deadLetterRetrying?.PermanentErrorsTopic, executeOnUtc: null, msg.CorrelationId);
+                        }
+                        return;
+                    }
                 },
                 new MessageHandlerOptions(
                     args =>

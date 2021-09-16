@@ -96,7 +96,7 @@ namespace Servicebus.JobScheduler.Core
             return scheduler;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddMainJobExecuter(IMessageHandler<JobWindow<TJobPayload>> mainHandler, int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
+        public JobSchedulerBuilder<TJobPayload> AddRootJobExecuter(IMessageHandler<JobWindow<TJobPayload>> mainHandler, int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
         {
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
             {
@@ -118,7 +118,7 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddMainJobExecuterType<THandler>(int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
+        public JobSchedulerBuilder<TJobPayload> AddRootJobExecuterType<THandler>(int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
             where THandler : IMessageHandler<JobWindow<TJobPayload>>
         {
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))

@@ -67,10 +67,6 @@ see TopicsFlow.vsdx visio file for logical flow
 ### test
 - from within the root folder `dotnet test` (tests tbd)
 
-
-### deploy (cloud)
-currently this app is running as a linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
-
 ## Use as consumer
 typical job execution workflow
 ```csharp
@@ -78,7 +74,7 @@ typical job execution workflow
                 .UseLoggerFactory(loggerFactory)                
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
-                .AddMainJobExecuter(
+                .AddRootJobExecuter(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) })                
@@ -141,6 +137,21 @@ jobs can be scheduled in 3 different methods:
   }
    _scheduler.ScheduleJob(job);
 ```
+### Job orchestrating
+In some cases Jobs can be complex, and own a few crusial steps till they are considered completed. mostly when each step contains "unstable" IO operations.  
+in those cases the app may orchestrate a Job flow using **Sub Jobs**.  
+Sub jobs can continue the flow of the root job executer. in that case Root Job Executer, should return **HandlerResponse.ContinueWithResult** that will tell the framework that the job is not done yet, and another sub job(or jobs) will continue the flow. each SubJob will benfit same retrying, logging and independcy the framework provides, while the root job be considered as completed, and be ready to handle more new jobs.
+to use Sub Jobs see example app [Program.cs](https://github.com/AmirSasson/Servicebus-JobScheduler/blob/6b84f19151dbeff12e38eb22cd46c3f3edf13ba8/src/Servicebus.JobScheduler.ExampleApp/Program.cs#L117). that calls `AddSubJobHandlerType`.
+
+### Error Handling
+* Each Job handler (or subJobHandler) can provide its own retry poilcy.
+  * retry policy can determine the **Permanent Topic** in which final error would be transfered to this topic, for later processing.
+  * by default each handling will be immediately retried 5 times till scheduling for later tries (based on the provided retry policy)
+  * handler can also fire a `ExecutionPermanentException` to stop retrying and fire to **Permanent Topic**
+* the framework also provides a **Permanent Topic** for job that had scheduling problems (prior to execution).
+
+## deploy (cloud)
+currently this app is running as a linux container on [AKS](https://docs.microsoft.com/en-us/azure/aks/).
 
 #### dockerize:
 from root folder run:  

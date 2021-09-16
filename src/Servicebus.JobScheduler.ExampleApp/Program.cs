@@ -138,7 +138,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
-                .AddMainJobExecuterType<WindowExecutionSubscriber>(
+                .AddRootJobExecuterType<WindowExecutionSubscriber>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                     enabled: options.ShouldRunJobExecution())
@@ -186,7 +186,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
-                .AddMainJobExecuter(
+                .AddRootJobExecuter(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },

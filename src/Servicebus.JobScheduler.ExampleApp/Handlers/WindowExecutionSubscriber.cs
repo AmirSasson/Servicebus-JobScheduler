@@ -22,6 +22,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         }
         protected override async Task<HandlerResponse> handlePrivate(JobWindow<JobCustomData> msg)
         {
+            // throw new ExecutionPermanentException();
             var result = await runRuleCondition(msg);
             HandlerResponse handlerResult;
             if (result.conditionMet)
