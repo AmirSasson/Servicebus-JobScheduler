@@ -31,6 +31,7 @@ namespace Servicebus.JobScheduler.ExampleApp
 
                   var (done, cts) = configureServer(logger);
                   var engine = await startAppWithOptionsWithDependencyInjection(o, loggerFactory, logger, config, cts);
+                  //var engine = await startAppWithOptions(o, loggerFactory, logger, config, cts);
                   blockTillTermination(engine, done, cts);
                   return 0;
               },
