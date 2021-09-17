@@ -1,8 +1,8 @@
 # Servicebus-JobScheduler
 This repo provides an implemented concept of task scheduling using azure service bus delayed messages.
 this project includes also a client simulator that initiated new Job Definitions Upserts that trigger the flows.
-#### how it works?
-using Publish Subscribe, the console application when starting, registers subscribers (handlers) to service bus topic subscriptions.  
+#### how the scheduling framework works?
+When starting the application, the framework registers subscribers (handlers) to service bus topic subscriptions to handle the scheduling.  
 Each handler, processes the message and publishes to next topic if needed.
 To initiate the process, the Tester Client simulates JobDefinition Upserts.
 see TopicsFlow.vsdx visio file for logical flow
@@ -34,7 +34,7 @@ see TopicsFlow.vsdx visio file for logical flow
     code .
 ```
 - You can choose 2 modes for the service bus: 
-  - Local - used for development, when you less care about persistency and stabilty. see run option `--local`.
+  - Local - used for development, when you less care about persistency and stabilty. see run option `--local true`.
   - Cloud - production use, using azure ServiceBus, to use this option add `appsettings.overrides.json` under `src/Servicebus.JobScheduler.ExampleApp` <u>next to</u> existing`appsettings.json` with content:
 
     ```json

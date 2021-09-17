@@ -108,7 +108,7 @@ namespace Servicebus.JobScheduler.Core
                 {
                     await _pubSubProvider.RegisterSubscriber(
                         SchedulingTopics.JobWindowValid.ToString(),
-                        SchedulingSubscriptions.JobWindowValid_RuleTimeWindowExecution.ToString(),
+                        SchedulingSubscriptions.JobWindowValid_JobExecution.ToString(),
                         concurrencyLevel: 3,
                         mainHandler,
                         retryPolicy,
@@ -131,7 +131,7 @@ namespace Servicebus.JobScheduler.Core
                 {
                     await _pubSubProvider.RegisterSubscriberType<JobWindow<TJobPayload>, THandler>(
                         SchedulingTopics.JobWindowValid.ToString(),
-                        SchedulingSubscriptions.JobWindowValid_RuleTimeWindowExecution.ToString(),
+                        SchedulingSubscriptions.JobWindowValid_JobExecution.ToString(),
                         concurrencyLevel: 3,
                         retryPolicy,
                         _source);

@@ -31,13 +31,13 @@ namespace Servicebus.JobScheduler.Core
 
         public async Task ScheduleJob(Job<TJobPayload> job)
         {
-            await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobDefinitionChange.ToString());
+            await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobScheduled.ToString());
         }
 
         public async Task ScheduleOnce(Job<TJobPayload> job, DateTime? executeOnUtc = null)
         {
             job.Schedule.PeriodicJob = false;
-            await _pubSubProvider.PublishAsync(job, SchedulingTopics.ReadyToRunJobWindow.ToString(), executeOnUtc);
+            await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
         }
 
         internal async Task SetupEntities(IConfiguration config, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
@@ -48,8 +48,8 @@ namespace Servicebus.JobScheduler.Core
         internal async Task StartSchedulingWorkers(IConfiguration config, ILoggerFactory loggerFactory, IJobChangeProvider changeProvider, CancellationTokenSource source)
         {
             await _pubSubProvider.RegisterSubscriber(
-               SchedulingTopics.JobDefinitionChange.ToString(),
-               SchedulingSubscriptions.JobDefinitionChange_ImmediateScheduleRule.ToString(),
+               SchedulingTopics.JobScheduled.ToString(),
+               SchedulingSubscriptions.JobScheduled_CreateJobWindowInstance.ToString(),
                concurrencyLevel: 3,
                new ScheduleNextRunSubscriber<TJobPayload>(loggerFactory.CreateLogger<ScheduleNextRunSubscriber<TJobPayload>>()),
                null,
@@ -57,8 +57,8 @@ namespace Servicebus.JobScheduler.Core
 
 
             await _pubSubProvider.RegisterSubscriber(
-               SchedulingTopics.ReadyToRunJobWindow.ToString(),
-               SchedulingSubscriptions.ReadyToRunJobWindow_Validation.ToString(),
+               SchedulingTopics.JobInstanceReadyToRun.ToString(),
+               SchedulingSubscriptions.JobInstanceReadyToRun_Validation.ToString(),
                concurrencyLevel: 3,
                new WindowValidatorSubscriber<TJobPayload>(loggerFactory.CreateLogger<WindowValidatorSubscriber<TJobPayload>>(), changeProvider),
                new RetryPolicy { PermanentErrorsTopic = SchedulingTopics.PermanentSchedulingErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },

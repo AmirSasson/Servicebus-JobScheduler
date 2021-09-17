@@ -2,8 +2,8 @@ namespace Servicebus.JobScheduler.Core
 {
     internal enum SchedulingTopics
     {
-        JobDefinitionChange,
-        ReadyToRunJobWindow,
+        JobScheduled,
+        JobInstanceReadyToRun,
         JobWindowValid,
         PermanentSchedulingErrors,
     }
@@ -11,9 +11,9 @@ namespace Servicebus.JobScheduler.Core
 
     internal enum SchedulingSubscriptions
     {
-        JobDefinitionChange_ImmediateScheduleRule,
-        ReadyToRunJobWindow_Validation,
+        JobScheduled_CreateJobWindowInstance,
+        JobInstanceReadyToRun_Validation,
         JobWindowValid_ScheduleNextRun,
-        JobWindowValid_RuleTimeWindowExecution,
+        JobWindowValid_JobExecution,
     }
 }

@@ -215,8 +215,6 @@ namespace Servicebus.JobScheduler.Core.Bus
             _logger.LogCritical("Running service bus Setup..");
             var adminClient = new ServiceBusAdministrationClient(_connectionString);
 
-            //var topicsNames = Enum.GetNames<TTopics>();
-
             CreateTopicOptions getTopicOptions(string topicName)
             {
                 var maxSizeInMegabytes = configuration.GetValue<int>($"ServiceBus:TopicsConfig:{topicName}:MaxSizeInMegabytes", 1024);
@@ -239,8 +237,6 @@ namespace Servicebus.JobScheduler.Core.Bus
                 }
             }
 
-            //var subscriptionNames = Enum.GetNames<TSubscription>();
-
             CreateSubscriptionOptions getSubscriptionOptions(string topicName, string subscriptionName)
             {
                 var maxImmediateRetriesInBatch = configuration.GetValue<int>($"ServiceBus:SubscriptionConfig:{topicName}:MaxImmediateRetriesInBatch", 5);
@@ -253,7 +249,11 @@ namespace Servicebus.JobScheduler.Core.Bus
             }
             foreach (var subscriptionName in subscriptionNames)
             {
-                var topicName = subscriptionName.Split("_").First();// subscription name should be in the format : <<TOPIC NAME>>_<<SUBSCRIPTION NAME>>
+                var topicName = subscriptionName.Split("_").First(); // subscription name should be in the format : <<TOPIC NAME>>_<<SUBSCRIPTION NAME>>
+                if (!topicsNames.Contains(topicName))
+                {
+                    throw new InvalidOperationException($"Subscription Name {subscriptionName} is invalid, must be in the format:  <<TOPIC NAME>>_<<SUBSCRIPTION NAME>>, no matching topic name was found!");
+                }
                 bool subscriptionExists = await adminClient.SubscriptionExistsAsync(topicName, subscriptionName);
                 if (!subscriptionExists)
                 {

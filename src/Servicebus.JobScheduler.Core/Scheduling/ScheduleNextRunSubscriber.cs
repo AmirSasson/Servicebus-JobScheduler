@@ -56,7 +56,7 @@ namespace Servicebus.JobScheduler.Core
                     SkipNextWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
                 };
                 var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
-                return new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = window, TopicToPublish = SchedulingTopics.ReadyToRunJobWindow.ToString(), ExecuteOnUtc = window.ToTime.Add(executionDelay) } };
+                return new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = window, TopicToPublish = SchedulingTopics.JobInstanceReadyToRun.ToString(), ExecuteOnUtc = window.ToTime.Add(executionDelay) } };
             }
             return HandlerResponse.FinalOk;
         }
