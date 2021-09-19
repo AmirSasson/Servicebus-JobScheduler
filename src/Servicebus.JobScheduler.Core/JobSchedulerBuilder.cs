@@ -75,20 +75,21 @@ namespace Servicebus.JobScheduler.Core
         }
         public async Task<IJobScheduler<TJobPayload>> BuildAsync()
         {
+            _config = _config ?? _serviceProvider.GetService<IOptions<ServiceBusConfig>>();
+            _logger = _logger ?? _serviceProvider.GetService<ILoggerFactory>() ?? new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
+
             foreach (var action in _preBuildActions)
             {
                 action();
             }
-            var config = _config ?? _serviceProvider.GetService<IOptions<ServiceBusConfig>>();
-            var logger = _logger ?? _serviceProvider.GetService<ILoggerFactory>() ?? new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
-            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(config, logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
-            var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, logger.CreateLogger<JobScheduler<TJobPayload>>());
+            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
+            var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
 
             await scheduler.SetupEntities(_topics, _subscriptions);
 
             if (_initiateSchedulingWorkers)
             {
-                await scheduler.StartSchedulingWorkers(logger, _changeProvider, _source);
+                await scheduler.StartSchedulingWorkers(_logger, _changeProvider, _source);
             }
             foreach (var task in _buildTasks)
             {
