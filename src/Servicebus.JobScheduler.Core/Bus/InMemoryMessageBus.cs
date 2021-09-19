@@ -109,7 +109,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
             return Task.FromResult(true);
         }
 
-        public Task SetupEntitiesIfNotExist(IConfiguration _, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames) => Task.CompletedTask;
+        public Task SetupEntitiesIfNotExist(IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames) => Task.CompletedTask;
 
 
         public ValueTask DisposeAsync()

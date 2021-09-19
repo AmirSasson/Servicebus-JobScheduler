@@ -15,6 +15,6 @@ namespace Servicebus.JobScheduler.Core.Contracts
         Task<bool> RegisterSubscriberType<TMessage, THandler>(string topic, string subscription, int concurrencyLevel, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
             where TMessage : class, IJob
             where THandler : IMessageHandler<TMessage>;
-        Task SetupEntitiesIfNotExist(IConfiguration configuration, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames);
+        Task SetupEntitiesIfNotExist(IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames);
     }
 }

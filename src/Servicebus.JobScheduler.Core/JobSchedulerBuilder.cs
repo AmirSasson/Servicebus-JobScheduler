@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Servicebus.JobScheduler.Core.Bus;
 using Servicebus.JobScheduler.Core.Bus.Emulator;
 using Servicebus.JobScheduler.Core.Contracts;
@@ -18,7 +19,7 @@ namespace Servicebus.JobScheduler.Core
     {
         private Contracts.IMessageBus _pubSubProvider;
         private ILoggerFactory _logger = new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
-        private IConfiguration _config;
+        private IOptions<ServiceBusConfig> _config;
         private bool _initiateSchedulingWorkers = true;
         private CancellationTokenSource _source;
         private IJobChangeProvider _changeProvider = new EmptyChangeProvider();
@@ -50,7 +51,7 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> WithConfiguration(IConfiguration config)
+        public JobSchedulerBuilder<TJobPayload> WithConfiguration(IOptions<ServiceBusConfig> config)
         {
             _config = config;
             return this;
@@ -82,11 +83,11 @@ namespace Servicebus.JobScheduler.Core
             _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
             var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
 
-            await scheduler.SetupEntities(_config, _topics, _subscriptions);
+            await scheduler.SetupEntities(_topics, _subscriptions);
 
             if (_initiateSchedulingWorkers)
             {
-                await scheduler.StartSchedulingWorkers(_config, _logger, _changeProvider, _source);
+                await scheduler.StartSchedulingWorkers(_logger, _changeProvider, _source);
             }
             foreach (var task in _buildTasks)
             {

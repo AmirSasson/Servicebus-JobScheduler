@@ -15,7 +15,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Options;
 
 namespace Servicebus.JobScheduler.Core.Bus
 {
@@ -23,13 +23,13 @@ namespace Servicebus.JobScheduler.Core.Bus
     {
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly string _connectionString;
+        private readonly IOptions<ServiceBusConfig> _config;
         private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new();
 
-        public AzureServiceBusService(IConfiguration config, ILogger logger, IServiceProvider serviceProvider)
+        public AzureServiceBusService(IOptions<ServiceBusConfig> config, ILogger logger, IServiceProvider serviceProvider)
         {
-            _connectionString = config.GetValue<string>("ServiceBus:ConnectionString");
-            if (string.IsNullOrEmpty(_connectionString))
+            _config = config;
+            if (string.IsNullOrEmpty(config.Value.ConnectionString))
             {
                 throw new ArgumentNullException("ServiceBus:ConnectionString");
             }
@@ -40,7 +40,7 @@ namespace Servicebus.JobScheduler.Core.Bus
 
         public async Task PublishAsync(BaseJob msg, string topic, DateTime? executeOnUtc = null, string correlationId = null)
         {
-            var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
+            var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _config.Value.ConnectionString, entityPath: path)) as TopicClient;
             try
             {
                 Message message = new()
@@ -102,7 +102,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 EntityNameHelper.FormatSubscriptionPath(topic.ToString(), subscription.ToString()),
                 (_) =>
                  new SubscriptionClient(
-                    connectionString: _connectionString,
+                    connectionString: _config.Value.ConnectionString,
                     topicPath: topic.ToString(),
                     subscriptionName: subscription.ToString(),
                     ReceiveMode.PeekLock,
@@ -164,13 +164,13 @@ namespace Servicebus.JobScheduler.Core.Bus
         {
             var dlqPath = EntityNameHelper.FormatDeadLetterPath(EntityNameHelper.FormatSubscriptionPath(retriesTopic.ToString(), subscription.ToString()));
 
-            var deadQueueReceiver = _clientEntities.GetOrAdd(dlqPath.ToString(), (path) => new MessageReceiver(_connectionString, path)) as MessageReceiver;
+            var deadQueueReceiver = _clientEntities.GetOrAdd(dlqPath.ToString(), (path) => new MessageReceiver(_config.Value.ConnectionString, path)) as MessageReceiver;
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
-                var topicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
-                var permenantTopicClient = _clientEntities.GetOrAdd(retry.PermanentErrorsTopic.ToString(), (path) => new TopicClient(connectionString: _connectionString, entityPath: path)) as TopicClient;
+                var topicClient = _clientEntities.GetOrAdd(retriesTopic.ToString(), (path) => new TopicClient(connectionString: _config.Value.ConnectionString, entityPath: path)) as TopicClient;
+                var permenantTopicClient = _clientEntities.GetOrAdd(retry.PermanentErrorsTopic.ToString(), (path) => new TopicClient(connectionString: _config.Value.ConnectionString, entityPath: path)) as TopicClient;
 
                 while (!source.IsCancellationRequested)
                 {
@@ -210,15 +210,15 @@ namespace Servicebus.JobScheduler.Core.Bus
             });
         }
 
-        public async Task SetupEntitiesIfNotExist(IConfiguration configuration, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
+        public async Task SetupEntitiesIfNotExist(IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
         {
             _logger.LogCritical("Running service bus Setup..");
-            var adminClient = new ServiceBusAdministrationClient(_connectionString);
+            var adminClient = new ServiceBusAdministrationClient(_config.Value.ConnectionString);
 
             CreateTopicOptions getTopicOptions(string topicName)
             {
-                var maxSizeInMegabytes = configuration.GetValue<int>($"ServiceBus:TopicsConfig:{topicName}:MaxSizeInMegabytes", 1024);
-                var enablePartitioning = configuration.GetValue<bool>($"ServiceBus:TopicsConfig:{topicName}:EnablePartitioning", false);
+                var maxSizeInMegabytes = _config.Value.GetTopicConfig(topicName).MaxSizeInMegabytes;
+                var enablePartitioning = _config.Value.GetTopicConfig(topicName).EnablePartitioning;
                 return new CreateTopicOptions(topicName) { MaxSizeInMegabytes = maxSizeInMegabytes, EnablePartitioning = enablePartitioning };
             }
 
@@ -239,7 +239,7 @@ namespace Servicebus.JobScheduler.Core.Bus
 
             CreateSubscriptionOptions getSubscriptionOptions(string topicName, string subscriptionName)
             {
-                var maxImmediateRetriesInBatch = configuration.GetValue<int>($"ServiceBus:SubscriptionConfig:{topicName}:MaxImmediateRetriesInBatch", 5);
+                var maxImmediateRetriesInBatch = _config.Value.GetSubscriberConfig(subscriptionName).MaxImmediateRetriesInBatch;
 
                 return new CreateSubscriptionOptions(topicName, subscriptionName)
                 {

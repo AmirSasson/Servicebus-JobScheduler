@@ -40,12 +40,12 @@ namespace Servicebus.JobScheduler.Core
             await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
         }
 
-        internal async Task SetupEntities(IConfiguration config, IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
+        internal async Task SetupEntities(IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
         {
-            await _pubSubProvider.SetupEntitiesIfNotExist(config, topicsNames, subscriptionNames);
+            await _pubSubProvider.SetupEntitiesIfNotExist(topicsNames, subscriptionNames);
         }
 
-        internal async Task StartSchedulingWorkers(IConfiguration config, ILoggerFactory loggerFactory, IJobChangeProvider changeProvider, CancellationTokenSource source)
+        internal async Task StartSchedulingWorkers(ILoggerFactory loggerFactory, IJobChangeProvider changeProvider, CancellationTokenSource source)
         {
             await _pubSubProvider.RegisterSubscriber(
                SchedulingTopics.JobScheduled.ToString(),

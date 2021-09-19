@@ -14,6 +14,8 @@ using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+
 namespace Servicebus.JobScheduler.ExampleApp
 {
     class Program
@@ -133,11 +135,16 @@ namespace Servicebus.JobScheduler.ExampleApp
 
             logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
 
+            var sbConfig = new ServiceBusConfig();
+            config.GetSection("ServiceBus").Bind(sbConfig);
+            var sbOptions = new InMemOptions<ServiceBusConfig>(sbConfig);
+
             var builder = new JobSchedulerBuilder<JobCustomData>()
+
                 .UseLoggerFactory(loggerFactory)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
-                .WithConfiguration(config)
+                .WithConfiguration(sbOptions)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddRootJobExecuterType<WindowExecutionSubscriber>(
                     concurrencyLevel: 3,
@@ -181,11 +188,15 @@ namespace Servicebus.JobScheduler.ExampleApp
             logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
             var db = new SimpleFilePerJobDefinitionRepository($"db_{options.RunId}");
 
+            var sbConfig = new ServiceBusConfig();
+            config.GetSection("ServiceBus").Bind(sbConfig);
+            var sbOptions = new InMemOptions<ServiceBusConfig>(sbConfig);
+
             var builder = new JobSchedulerBuilder<JobCustomData>()
                 .UseLoggerFactory(loggerFactory)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
-                .WithConfiguration(config)
+                .WithConfiguration(sbOptions)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddRootJobExecuter(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
