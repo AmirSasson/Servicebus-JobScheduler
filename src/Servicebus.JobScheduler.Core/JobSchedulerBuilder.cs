@@ -11,13 +11,14 @@ using Servicebus.JobScheduler.Core.Bus;
 using Servicebus.JobScheduler.Core.Bus.Emulator;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Servicebus.JobScheduler.Core
 {
     public class JobSchedulerBuilder<TJobPayload>
     {
         private Contracts.IMessageBus _pubSubProvider;
-        private ILoggerFactory _logger = new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
+        private ILoggerFactory _logger = null;
         private IOptions<ServiceBusConfig> _config;
         private bool _initiateSchedulingWorkers = true;
         private CancellationTokenSource _source;
@@ -78,15 +79,16 @@ namespace Servicebus.JobScheduler.Core
             {
                 action();
             }
-
-            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
-            var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
+            var config = _config ?? _serviceProvider.GetService<IOptions<ServiceBusConfig>>();
+            var logger = _logger ?? _serviceProvider.GetService<ILoggerFactory>() ?? new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
+            _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(config, logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
+            var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, logger.CreateLogger<JobScheduler<TJobPayload>>());
 
             await scheduler.SetupEntities(_topics, _subscriptions);
 
             if (_initiateSchedulingWorkers)
             {
-                await scheduler.StartSchedulingWorkers(_logger, _changeProvider, _source);
+                await scheduler.StartSchedulingWorkers(logger, _changeProvider, _source);
             }
             foreach (var task in _buildTasks)
             {

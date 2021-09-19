@@ -129,27 +129,21 @@ namespace Servicebus.JobScheduler.ExampleApp
                             services.AddScoped<PublishJobResultsSubscriber>((services) => new PublishJobResultsSubscriber(loggerFactory.CreateLogger<PublishJobResultsSubscriber>(), options.RunId, simulateFailurePercents: options.HandlingErrorRate));
                             services.AddScoped<RuleSupressorSubscriber>((services) => new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: options.HandlingErrorRate));
                             services.AddScoped<ScheduleIngestionDelayExecutionSubscriber>((services) => new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)));
+                            services.Configure<ServiceBusConfig>(options => config.GetSection("ServiceBus").Bind(options));
                         })
                         .Build();
 
             logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
 
-            var sbConfig = new ServiceBusConfig();
-            config.GetSection("ServiceBus").Bind(sbConfig);
-            var sbOptions = new InMemOptions<ServiceBusConfig>(sbConfig);
-
             var builder = new JobSchedulerBuilder<JobCustomData>()
-
-                .UseLoggerFactory(loggerFactory)
+                .WithHandlersServiceProvider(host.Services)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
-                .WithConfiguration(sbOptions)
                 .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddRootJobExecuterType<WindowExecutionSubscriber>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                     enabled: options.ShouldRunJobExecution())
-                .WithHandlersServiceProvider(host.Services)
                 .AddSubJobHandlerType<Messages.JobOutput, PublishJobResultsSubscriber>(
                     Topics.JobWindowConditionMet.ToString(),
                     Subscriptions.JobWindowConditionMet_Publish.ToString(),
