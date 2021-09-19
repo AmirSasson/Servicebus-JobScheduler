@@ -1,7 +1,6 @@
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Core;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
