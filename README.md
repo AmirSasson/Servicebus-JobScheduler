@@ -4,8 +4,6 @@ this project includes also a client simulator that initiated new Job Definitions
 
 available on [nuget](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/).
 
-(Input) An Object + Rule(s) => (Output) Is Match
-
 [![NuGet Badge](https://buildstats.info/nuget/Servicebus.JobScheduler.Core)](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/)
 
 #### how the scheduling framework works?
