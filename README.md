@@ -4,6 +4,8 @@ this project includes also a client simulator that initiated new Job Definitions
 
 available on [nuget](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/).
 
+[![Build Status](https://app.travis-ci.com/AmirSasson/Servicebus-JobScheduler.svg?branch=main)](https://app.travis-ci.com/AmirSasson/Servicebus-JobScheduler)
+  
 [![NuGet Badge](https://buildstats.info/nuget/Servicebus.JobScheduler.Core)](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/)
 
 #### how the scheduling framework works?
