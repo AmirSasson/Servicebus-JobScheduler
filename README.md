@@ -1,6 +1,13 @@
 # Servicebus-JobScheduler
-This repo provides an implemented concept of task scheduling using azure service bus delayed messages.
+This repo provides an implemented framework of task scheduling using azure service bus delayed messages.
 this project includes also a client simulator that initiated new Job Definitions Upserts that trigger the flows.
+
+available on [nuget](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/).
+
+(Input) An Object + Rule(s) => (Output) Is Match
+
+[![NuGet Badge](https://buildstats.info/nuget/Servicebus.JobScheduler.Core)](https://www.nuget.org/packages/Servicebus.JobScheduler.Core/)
+
 #### how the scheduling framework works?
 When starting the application, the framework registers subscribers (handlers) to service bus topic subscriptions to handle the scheduling.  
 Each handler, processes the message and publishes to next topic if needed.

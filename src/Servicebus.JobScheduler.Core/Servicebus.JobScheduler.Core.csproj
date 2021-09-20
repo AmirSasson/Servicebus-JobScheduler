@@ -3,6 +3,14 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <OutputType>Library</OutputType>
+    <PackageId>Servicebus.JobScheduler.Core</PackageId>
+    <Version>1.0.1</Version>
+    <Authors>Amir Sasson</Authors>
+    <Company>Amir Sasson</Company>
+    <PackageTags>JobScheduler;Azure;ServiceBus;EasySetup;Scalable</PackageTags>
+    <Description>This repo provides an implemented framework of task scheduling using azure service bus delayed messages.</Description>
+    <RepositoryUrl>https://github.com/AmirSasson/Servicebus-JobScheduler</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
