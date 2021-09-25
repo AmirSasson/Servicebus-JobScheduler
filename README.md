@@ -77,11 +77,11 @@ see TopicsFlow.vsdx visio file for logical flow
 ## Use as consumer
 typical job execution workflow
 ```csharp
-            var builder = new JobSchedulerBuilder<JobCustomData>()
+            var builder = new JobSchedulerBuilder()
                 .UseLoggerFactory(loggerFactory)                
                 .WithCancelationSource(source)
                 .WithConfiguration(config)
-                .AddRootJobExecuter(
+                .AddRootJobExecuter<JobCustomData>(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) })                
