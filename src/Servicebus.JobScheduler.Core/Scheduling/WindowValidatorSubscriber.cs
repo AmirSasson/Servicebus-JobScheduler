@@ -6,19 +6,19 @@ using System.Threading.Tasks;
 
 namespace Servicebus.JobScheduler.Core
 {
-    internal class WindowValidatorSubscriber<TJobPayload> : IMessageHandler<JobWindow<TJobPayload>>
+    internal class WindowValidatorSubscriber : IMessageHandler<JobWindow<object>>
     {
         private readonly IJobChangeProvider _changeDetector;
         private readonly ILogger _logger;
 
-        public WindowValidatorSubscriber(ILogger<WindowValidatorSubscriber<TJobPayload>> logger, IJobChangeProvider changeProvider)
+        public WindowValidatorSubscriber(ILogger<WindowValidatorSubscriber> logger, IJobChangeProvider changeProvider)
         {
             _changeDetector = changeProvider;
 
             _logger = logger;
         }
 
-        public async Task<HandlerResponse> Handle(JobWindow<TJobPayload> msg)
+        public async Task<HandlerResponse> Handle(JobWindow<object> msg)
         {
             // if (msg.RunId != _runId)
             // {
@@ -33,10 +33,10 @@ namespace Servicebus.JobScheduler.Core
             // }
 
             var handlerResult = HandlerResponse.FinalOk;
-
+            var topicToPublish = SchedulingDynamicTopicsPrefix.JobWindowValid.ToString() + msg.JobType;
             if (msg.SkipNextWindowValidation)
             {
-                handlerResult = new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = msg, TopicToPublish = SchedulingTopics.JobWindowValid.ToString() } };
+                handlerResult = new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = msg, TopicToPublish = topicToPublish } };
             }
             else
             {
@@ -51,7 +51,7 @@ namespace Servicebus.JobScheduler.Core
                 else
                 {
                     _logger.LogInformation($"rule {msg.Id} Valid LastRunWindowUpperBound:{msg.LastRunWindowUpperBound}");
-                    handlerResult = new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = msg, TopicToPublish = SchedulingTopics.JobWindowValid.ToString() } };
+                    handlerResult = new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = msg, TopicToPublish = topicToPublish } };
                 }
             }
             return handlerResult;

@@ -1,8 +1,11 @@
+using System.Collections.Generic;
+
 namespace Servicebus.JobScheduler.ExampleApp.Common
 {
     public class JobCustomData
     {
         public string Query { get; set; }
+        public ComplexCustomData Complex { get; set; }
 
         public JobBehaviorMode BehaviorMode { get; set; }
 
@@ -11,6 +14,12 @@ namespace Servicebus.JobScheduler.ExampleApp.Common
             Simple,
             DisabledAfterFirstJobOutput,
         }
+    }
 
+    public class ComplexCustomData
+    {
+        public List<int> SomeList { get; set; }
+
+        public Dictionary<string, int> SomeDic { get; set; }
     }
 }

@@ -10,12 +10,12 @@ using Servicebus.JobScheduler.Core.Contracts.Messages;
 
 namespace Servicebus.JobScheduler.Core
 {
-    public class JobScheduler<TJobPayload> : IJobScheduler<TJobPayload>
+    public class JobScheduler : IJobScheduler
     //where TTopics : struct, Enum where TSubscription : struct, Enum
     {
         private readonly IMessageBus _pubSubProvider;
 
-        public JobScheduler(IMessageBus pubSubProvider, ILogger<JobScheduler<TJobPayload>> logger)
+        public JobScheduler(IMessageBus pubSubProvider, ILogger<JobScheduler> logger)
         {
             _pubSubProvider = pubSubProvider;
         }
@@ -28,13 +28,15 @@ namespace Servicebus.JobScheduler.Core
             }
         }
 
-        public async Task ScheduleJob(Job<TJobPayload> job)
+        public async Task ScheduleJob<TJobPayload>(Job<TJobPayload> job)
         {
+            job.JobType = EntitiesPathHelper.JobTypeName<TJobPayload>(); ;
             await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobScheduled.ToString());
         }
 
-        public async Task ScheduleOnce(Job<TJobPayload> job, DateTime? executeOnUtc = null)
+        public async Task ScheduleOnce<TJobPayload>(Job<TJobPayload> job, DateTime? executeOnUtc = null)
         {
+            job.JobType = EntitiesPathHelper.JobTypeName<TJobPayload>(); ;
             job.Schedule.PeriodicJob = false;
             await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
         }
@@ -50,28 +52,17 @@ namespace Servicebus.JobScheduler.Core
                SchedulingTopics.JobScheduled.ToString(),
                SchedulingSubscriptions.JobScheduled_CreateJobWindowInstance.ToString(),
                concurrencyLevel: 3,
-               new ScheduleNextRunSubscriber<TJobPayload>(loggerFactory.CreateLogger<ScheduleNextRunSubscriber<TJobPayload>>()),
+               new ScheduleNextRunSubscriber(loggerFactory.CreateLogger<ScheduleNextRunSubscriber>()),
                null,
                source);
-
 
             await _pubSubProvider.RegisterSubscriber(
                SchedulingTopics.JobInstanceReadyToRun.ToString(),
                SchedulingSubscriptions.JobInstanceReadyToRun_Validation.ToString(),
                concurrencyLevel: 3,
-               new WindowValidatorSubscriber<TJobPayload>(loggerFactory.CreateLogger<WindowValidatorSubscriber<TJobPayload>>(), changeProvider),
+               new WindowValidatorSubscriber(loggerFactory.CreateLogger<WindowValidatorSubscriber>(), changeProvider),
                new RetryPolicy { PermanentErrorsTopic = SchedulingTopics.PermanentSchedulingErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                source);
-
-
-
-            await _pubSubProvider.RegisterSubscriber(
-                SchedulingTopics.JobWindowValid.ToString(),
-                SchedulingSubscriptions.JobWindowValid_ScheduleNextRun.ToString(),
-                concurrencyLevel: 3,
-                new ScheduleNextRunSubscriber<TJobPayload>(loggerFactory.CreateLogger<ScheduleNextRunSubscriber<TJobPayload>>()),
-                null,
-                source);
         }
 
     }

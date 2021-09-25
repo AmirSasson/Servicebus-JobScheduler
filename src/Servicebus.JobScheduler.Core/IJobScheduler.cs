@@ -6,10 +6,10 @@ using Servicebus.JobScheduler.Core.Contracts;
 
 namespace Servicebus.JobScheduler.Core
 {
-    public interface IJobScheduler<TJobPayload> : IAsyncDisposable
+    public interface IJobScheduler : IAsyncDisposable
     {
-        Task ScheduleJob(Job<TJobPayload> job);
+        Task ScheduleJob<TJobPayload>(Job<TJobPayload> job);
 
-        Task ScheduleOnce(Job<TJobPayload> job, DateTime? executeOnUtc = null);
+        Task ScheduleOnce<TJobPayload>(Job<TJobPayload> job, DateTime? executeOnUtc = null);
     }
 }
