@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
+using Servicebus.JobScheduler.Core.Utils;
 
 namespace Servicebus.JobScheduler.Core
 {
@@ -30,11 +31,18 @@ namespace Servicebus.JobScheduler.Core
 
         public async Task ScheduleJob(Job<TJobPayload> job)
         {
+            Validator.EnsureNotNull(job.Id, "job id must be specified");
+            Validator.EnsureNotNull(job.Schedule, "job Schedule must be specified");
             await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobScheduled.ToString());
         }
 
         public async Task ScheduleOnce(Job<TJobPayload> job, DateTime? executeOnUtc = null)
         {
+            Validator.EnsureNotNull(job.Id, "job id must be specified");
+            if (job.Schedule == null)
+            {
+                job.Schedule = new JobSchedule { };
+            }
             job.Schedule.PeriodicJob = false;
             await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
         }

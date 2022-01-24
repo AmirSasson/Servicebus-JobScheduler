@@ -41,10 +41,11 @@ namespace Servicebus.JobScheduler.Core.Contracts
 
         /// <summary>
         /// returns next Scheduletime based on previous window Upper Bound
-        /// </summary>
-        public (DateTime? from, DateTime? to) GetNextScheduleWindowTimeRange(DateTime? previousRunUpperBound)
+        /// </summary>        
+        /// <remarks>learn nore about Tumbling Window https://docs.microsoft.com/en-us/stream-analytics-query/tumbling-window-azure-stream-analytics#:~:text=The%20windows%20of%20Azure%20Stream%20Analytics%20are%20opened,AM%20inclusive%20will%20be%20included%20within%20this%20window. </remarks>        
+        public (DateTime? from, DateTime? to) GetNextScheduleTumblingWindowTimeRange(DateTime? previousRunUpperBound)
         {
-            int actualRunIntervalSeconds = this.RunIntervalSeconds ?? getWindowRangeInSeconds();
+            int actualRunIntervalSeconds = this.RunIntervalSeconds ?? getTumblingWindowRangeInSeconds();
             var actualPreviousRunUpperBound = previousRunUpperBound ?? DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(actualRunIntervalSeconds));
             var nextWindowLowerBoundTime = actualPreviousRunUpperBound;
             var nextWindowUpperBoundTime = actualPreviousRunUpperBound.Add(TimeSpan.FromSeconds(actualRunIntervalSeconds));
@@ -61,7 +62,7 @@ namespace Servicebus.JobScheduler.Core.Contracts
             return (null, null);
         }
 
-        private int getWindowRangeInSeconds()
+        private int getTumblingWindowRangeInSeconds()
         {
             if (!this.RunIntervalSeconds.HasValue && !string.IsNullOrEmpty(CronSchedulingExpression))
             {

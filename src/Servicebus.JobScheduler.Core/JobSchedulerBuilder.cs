@@ -12,6 +12,7 @@ using Servicebus.JobScheduler.Core.Bus.Emulator;
 using Servicebus.JobScheduler.Core.Contracts;
 using Servicebus.JobScheduler.Core.Contracts.Messages;
 using Microsoft.Extensions.DependencyInjection;
+using Servicebus.JobScheduler.Core.Utils;
 
 namespace Servicebus.JobScheduler.Core
 {
@@ -75,6 +76,7 @@ namespace Servicebus.JobScheduler.Core
         }
         public async Task<IJobScheduler<TJobPayload>> BuildAsync()
         {
+            Validator.EnsureAtLeastOneNotNull("Either Configuration or Service Provider must be specified", _config, _serviceProvider);
             _config = _config ?? _serviceProvider.GetService<IOptions<ServiceBusConfig>>();
             _logger = _logger ?? _serviceProvider.GetService<ILoggerFactory>() ?? new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
 
@@ -82,6 +84,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 action();
             }
+            
             _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
             var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
 
@@ -95,7 +98,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 await task(scheduler);
             }
-
+            
             return scheduler;
         }
 
@@ -200,6 +203,18 @@ namespace Servicebus.JobScheduler.Core
                 {
                     _logger.CreateLogger("Init").LogCritical("Running with local in mem Service bus mock");
                     _pubSubProvider = new InMemoryMessageBus(_logger.CreateLogger<InMemoryMessageBus>(), _serviceProvider);
+                });
+            }
+            return this;
+        }
+
+        public JobSchedulerBuilder<TJobPayload> UseAzureServicePubsubProvider(bool use)
+        {
+            if (use)
+            {
+                _preBuildActions.Add(() =>
+                {
+                    _pubSubProvider = new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);                    
                 });
             }
             return this;

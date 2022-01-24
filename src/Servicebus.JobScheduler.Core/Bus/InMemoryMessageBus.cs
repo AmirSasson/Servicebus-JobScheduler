@@ -44,7 +44,6 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 var msgAfterSerializing = JsonSerializer.Deserialize(str, msg.GetType());
                 if (string.IsNullOrWhiteSpace((msgAfterSerializing as BaseJob).Id))
                 {
-
                     throw new ArgumentException("Message Id cannot be null or empty");
                 }
 

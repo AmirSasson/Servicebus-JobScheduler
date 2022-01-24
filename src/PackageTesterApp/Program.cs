@@ -33,8 +33,7 @@ namespace PackageTesterApp
             var builder = new JobSchedulerBuilder<JobData>()
                 .WithHandlersServiceProvider(host.Services)
                 .UseSchedulingWorker()
-                .WithCancelationSource(cancelToken)
-                .UseInMemoryPubsubProvider(true)
+                .WithCancelationSource(cancelToken)                
                 .AddRootJobExecuterType<EchoWindowExecutionSubscriber>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = "TestPermamantErrors", RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) }

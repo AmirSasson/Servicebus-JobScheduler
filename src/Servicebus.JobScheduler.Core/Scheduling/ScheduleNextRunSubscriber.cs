@@ -20,24 +20,28 @@ namespace Servicebus.JobScheduler.Core
             _logger.LogInformation($"handling JobDefinition should reschedule for later: {shouldScheduleNextWindow}");
             if (shouldScheduleNextWindow)
             {
-                var nextJob = publishWindowReady(msg);
-                JobWindow<TJobPayload> job = nextJob.ContinueWithResult.Message as JobWindow<TJobPayload>;
-                _logger.LogInformation($"Scheduling Next window: {job.FromTime} -> {job.ToTime} -> executed on {nextJob.ContinueWithResult.ExecuteOnUtc}");
+                var nextJob = getNextJob(msg);
+                logNextJob(nextJob);
                 return nextJob.AsTask();
             }
             return HandlerResponse.FinalOkAsTask;
         }
 
+        private void logNextJob(HandlerResponse nextJob)
+        {
+            JobWindow<TJobPayload> job = nextJob.ContinueWithResult.Message as JobWindow<TJobPayload>;
+            _logger.LogInformation($"Scheduling Next window: {job.FromTime} -> {job.ToTime} -> executed on {nextJob.ContinueWithResult.ExecuteOnUtc}");
+        }
+
         /// <summary>
         /// publishes to WindowReady topic
         /// </summary>
-        /// <param name="msg">the Job Defination</param>
-        /// <param name="executionDelay">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
+        /// <param name="msg">the Job Defination</param>        
         /// <param name="runInIntervals">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <returns></returns>
-        private HandlerResponse publishWindowReady(Job<TJobPayload> msg, bool runInIntervals = true)
+        private HandlerResponse getNextJob(Job<TJobPayload> msg, bool runInIntervals = true)
         {
-            (DateTime? nextWindowFromTime, DateTime? nextWindowToTime) = msg.Schedule.GetNextScheduleWindowTimeRange(msg.LastRunWindowUpperBound);
+            (DateTime? nextWindowFromTime, DateTime? nextWindowToTime) = msg.Schedule.GetNextScheduleTumblingWindowTimeRange(msg.LastRunWindowUpperBound);
 
             if (nextWindowToTime.HasValue)
             {
