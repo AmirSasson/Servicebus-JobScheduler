@@ -21,7 +21,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish Servicebus.JobScheduler.Core
-        uses: brandedoutcast/publish-nuget@v2.5.5
+        uses: alirezanet/publish-nuget@v3.0.0
         with:
           PROJECT_FILE_PATH: src/Servicebus.JobScheduler.Core/Servicebus.JobScheduler.Core.csproj
           VERSION_FILE_PATH: src/Servicebus.JobScheduler.Core/Servicebus.JobScheduler.Core.csproj
