@@ -1,9 +1,10 @@
-name: Publish Packages
-
+name: Publish NuGet
 on:
-  push:
+  workflow_run:
+    workflows: [".NET"]
     branches: [main]
-
+    types: 
+      - completed
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,10 +21,11 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish Servicebus.JobScheduler.Core
-        uses: brandedoutcast/publish-nuget@v2.5.2
+        uses: brandedoutcast/publish-nuget@v2.5.5
         with:
           PROJECT_FILE_PATH: src/Servicebus.JobScheduler.Core/Servicebus.JobScheduler.Core.csproj
           VERSION_FILE_PATH: src/Servicebus.JobScheduler.Core/Servicebus.JobScheduler.Core.csproj
+          PACKAGE_NAME: Servicebus.JobScheduler.Core
           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
           NUGET_SOURCE: https://api.nuget.org
           INCLUDE_SYMBOLS: true
