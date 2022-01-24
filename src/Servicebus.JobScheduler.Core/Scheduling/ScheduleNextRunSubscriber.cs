@@ -39,7 +39,7 @@ namespace Servicebus.JobScheduler.Core
         /// <param name="msg">the Job Defination</param>        
         /// <param name="runInIntervals">false if no need for aother rescheduleing (30 minutes ingestion time scenrio)</param>
         /// <returns></returns>
-        private HandlerResponse publishWindowReady(Job<object> msg, bool runInIntervals = true)
+        private HandlerResponse getNextJob(Job<object> msg, bool runInIntervals = true)
         {
             (DateTime? nextWindowFromTime, DateTime? nextWindowToTime) = msg.Schedule.GetNextScheduleTumblingWindowTimeRange(msg.LastRunWindowUpperBound);
 

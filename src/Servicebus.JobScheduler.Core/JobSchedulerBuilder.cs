@@ -257,7 +257,7 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> UseAzureServicePubsubProvider(bool use)
+        public JobSchedulerBuilder UseAzureServicePubsubProvider(bool use)
         {
             if (use)
             {
