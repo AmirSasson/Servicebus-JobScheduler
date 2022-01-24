@@ -12,11 +12,11 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
     public class ScheduleIngestionDelayExecutionSubscriber : BaseSimulatorHandler<JobWindowExecutionContext>
     {
         private readonly ILogger _logger;
-        private readonly Lazy<IJobScheduler<JobCustomData>> _scheduler;
+        private readonly Lazy<IJobScheduler> _scheduler;
         const int INGESTION_TOLLERANCE_DELAY_MINUTES = 2;
         readonly TimeSpan _ingestionDelay = TimeSpan.FromMinutes(INGESTION_TOLLERANCE_DELAY_MINUTES);
 
-        public ScheduleIngestionDelayExecutionSubscriber(ILogger<ScheduleIngestionDelayExecutionSubscriber> logger, int simulateFailurePercents, Lazy<IJobScheduler<JobCustomData>> scheduler)
+        public ScheduleIngestionDelayExecutionSubscriber(ILogger<ScheduleIngestionDelayExecutionSubscriber> logger, int simulateFailurePercents, Lazy<IJobScheduler> scheduler)
         : base(simulateFailurePercents, TimeSpan.Zero, logger)
         {
             _logger = logger;

@@ -59,6 +59,16 @@
       "stopAtEntry": false
     },
     {
+      "name": "PackageTesterApp",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "console": "externalTerminal",
+      "program": "${workspaceFolder}/src/PackageTesterApp/bin/Debug/net5.0/PackageTesterApp.dll",
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false
+    },
+    {
       "name": ".NET Core Attach",
       "type": "coreclr",
       "request": "attach"

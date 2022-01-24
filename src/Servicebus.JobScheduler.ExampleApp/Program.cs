@@ -19,7 +19,7 @@ namespace Servicebus.JobScheduler.ExampleApp
 {
     class Program
     {
-        private static IJobScheduler<JobCustomData> _scheduler;
+        private static IJobScheduler _scheduler;
 
         static async Task<int> Main(string[] args)
         {
@@ -31,8 +31,8 @@ namespace Servicebus.JobScheduler.ExampleApp
                   ILogger logger = loggerFactory.CreateLogger("System");
 
                   var (done, cts) = configureServer(logger);
-                  var engine = await startAppWithOptionsWithDependencyInjection(o, loggerFactory, logger, config, cts);
-                  //var engine = await startAppWithOptions(o, loggerFactory, logger, config, cts);
+                  //var engine = await startAppWithOptionsWithDependencyInjection(o, loggerFactory, logger, config, cts);
+                  var engine = await startAppWithOptions(o, loggerFactory, logger, config, cts);
                   blockTillTermination(engine, done, cts);
                   return 0;
               },
@@ -128,19 +128,19 @@ namespace Servicebus.JobScheduler.ExampleApp
                             services.AddScoped<WindowExecutionSubscriber>((services) => new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)));
                             services.AddScoped<PublishJobResultsSubscriber>((services) => new PublishJobResultsSubscriber(loggerFactory.CreateLogger<PublishJobResultsSubscriber>(), options.RunId, simulateFailurePercents: options.HandlingErrorRate));
                             services.AddScoped<RuleSupressorSubscriber>((services) => new RuleSupressorSubscriber(db, loggerFactory.CreateLogger<RuleSupressorSubscriber>(), simulateFailurePercents: options.HandlingErrorRate));
-                            services.AddScoped<ScheduleIngestionDelayExecutionSubscriber>((services) => new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)));
+                            services.AddScoped<ScheduleIngestionDelayExecutionSubscriber>((services) => new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler>(() => _scheduler)));
                             services.Configure<ServiceBusConfig>(options => config.GetSection("ServiceBus").Bind(options));
                         })
                         .Build();
 
             logger.LogDebug($"Starting app.. with options: {options.GetDescription()}");
 
-            var builder = new JobSchedulerBuilder<JobCustomData>()
+            var builder = new JobSchedulerBuilder()
                 .WithHandlersServiceProvider(host.Services)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
-                .UseAzureServicePubsubProvider(options.LocalServiceBus == false)                
-                .AddRootJobExecuterType<WindowExecutionSubscriber>(
+                .UseAzureServicePubsubProvider(options.LocalServiceBus == false)
+                .AddRootJobExecuterType<WindowExecutionSubscriber, JobCustomData>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
                     enabled: options.ShouldRunJobExecution())
@@ -185,13 +185,13 @@ namespace Servicebus.JobScheduler.ExampleApp
             config.GetSection("ServiceBus").Bind(sbConfig);
             var sbOptions = new InMemOptions<ServiceBusConfig>(sbConfig);
 
-            var builder = new JobSchedulerBuilder<JobCustomData>()
+            var builder = new JobSchedulerBuilder()
                 .UseLoggerFactory(loggerFactory)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
                 .WithConfiguration(sbOptions)
                 .UseAzureServicePubsubProvider(options.LocalServiceBus == false)
-                .AddRootJobExecuter(
+                .AddRootJobExecuter<JobCustomData>(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
@@ -211,7 +211,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .AddSubJobHandler(
                     Topics.JobWindowConditionNotMet.ToString(),
                     Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay.ToString(),
-                    new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler<JobCustomData>>(() => _scheduler)),
+                    new ScheduleIngestionDelayExecutionSubscriber(loggerFactory.CreateLogger<ScheduleIngestionDelayExecutionSubscriber>(), simulateFailurePercents: options.HandlingErrorRate, new Lazy<IJobScheduler>(() => _scheduler)),
                     concurrencyLevel: 1,
                     enabled: options.ShouldRunMode(Subscriptions.JobWindowConditionNotMet_ScheduleIngestionDelay))
                 .UseJobChangeProvider(db);

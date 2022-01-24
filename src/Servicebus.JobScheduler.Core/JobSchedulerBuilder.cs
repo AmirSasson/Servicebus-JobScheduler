@@ -16,7 +16,7 @@ using Servicebus.JobScheduler.Core.Utils;
 
 namespace Servicebus.JobScheduler.Core
 {
-    public class JobSchedulerBuilder<TJobPayload>
+    public class JobSchedulerBuilder
     {
         private Contracts.IMessageBus _pubSubProvider;
         private ILoggerFactory _logger = null;
@@ -25,57 +25,62 @@ namespace Servicebus.JobScheduler.Core
         private CancellationTokenSource _source;
         private IJobChangeProvider _changeProvider = new EmptyChangeProvider();
         private List<Action> _preBuildActions = new();
-        private List<Func<JobScheduler<TJobPayload>, Task>> _buildTasks = new();
+        private List<Func<JobScheduler, Task>> _buildTasks = new();
         private IServiceProvider _serviceProvider;
+        private HashSet<string> _scheduledJobTypes = new HashSet<string>();
         private readonly HashSet<string> _topics = Enum.GetNames<SchedulingTopics>().ToHashSet();
         private readonly HashSet<string> _subscriptions = Enum.GetNames<SchedulingSubscriptions>().ToHashSet();
 
-        public JobSchedulerBuilder<TJobPayload> UsePubsubProvider(Contracts.IMessageBus pubSubProvider)
+        public JobSchedulerBuilder UsePubsubProvider(Contracts.IMessageBus pubSubProvider)
         {
             _pubSubProvider = pubSubProvider;
             return this;
         }
-        public JobSchedulerBuilder<TJobPayload> UseLoggerFactory(ILoggerFactory logger)
+        public JobSchedulerBuilder UseLoggerFactory(ILoggerFactory logger)
         {
             _logger = logger;
             return this;
         }
-        public JobSchedulerBuilder<TJobPayload> UseSchedulingWorker(bool initiateSchedulingWorkers = true)
+        public JobSchedulerBuilder UseSchedulingWorker(bool initiateSchedulingWorkers = true)
         {
             _initiateSchedulingWorkers = initiateSchedulingWorkers;
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> WithCancelationSource(CancellationTokenSource source)
+        public JobSchedulerBuilder WithCancelationSource(CancellationTokenSource source)
         {
             _source = source;
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> WithConfiguration(IOptions<ServiceBusConfig> config)
+        public JobSchedulerBuilder WithConfiguration(IOptions<ServiceBusConfig> config)
         {
             _config = config;
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> UseJobChangeProvider(IJobChangeProvider changeProvider)
+        public JobSchedulerBuilder UseJobChangeProvider(IJobChangeProvider changeProvider)
         {
             _changeProvider = changeProvider;
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> WithHandlersServiceProvider(IServiceProvider serviceProvider)
+        public JobSchedulerBuilder WithHandlersServiceProvider(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
             return this;
         }
 
-        public IJobScheduler<TJobPayload> Build()
+        public IJobScheduler Build()
         {
             return BuildAsync().Result;
         }
-        public async Task<IJobScheduler<TJobPayload>> BuildAsync()
+        public async Task<IJobScheduler> BuildAsync()
         {
+            if (!_scheduledJobTypes.Any())
+            {
+                throw new InvalidProgramException("Root Handler must be registered!, Use AddRootJobExecuter");
+            }
             Validator.EnsureAtLeastOneNotNull("Either Configuration or Service Provider must be specified", _config, _serviceProvider);
             _config = _config ?? _serviceProvider.GetService<IOptions<ServiceBusConfig>>();
             _logger = _logger ?? _serviceProvider.GetService<ILoggerFactory>() ?? new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
@@ -86,7 +91,7 @@ namespace Servicebus.JobScheduler.Core
             }
             
             _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
-            var scheduler = new JobScheduler<TJobPayload>(_pubSubProvider, _logger.CreateLogger<JobScheduler<TJobPayload>>());
+            var scheduler = new JobScheduler(_pubSubProvider, _logger.CreateLogger<JobScheduler>());
 
             await scheduler.SetupEntities(_topics, _subscriptions);
 
@@ -102,8 +107,19 @@ namespace Servicebus.JobScheduler.Core
             return scheduler;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddRootJobExecuter(IMessageHandler<JobWindow<TJobPayload>> mainHandler, int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
+        public JobSchedulerBuilder AddRootJobExecuter<TJobPayload>(IMessageHandler<JobWindow<TJobPayload>> mainHandler, int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
         {
+            var scheduledJobType = EntitiesPathHelper.JobTypeName<TJobPayload>();
+            if (!_scheduledJobTypes.Add(scheduledJobType))
+            {
+                throw new InvalidProgramException($"Root with JobType {scheduledJobType} Handler already registered!, you may call AddRootJobExecuter only once per jobType");
+            }
+            var dynTopicName = EntitiesPathHelper.GetDynamicTopicName<TJobPayload>(SchedulingDynamicTopicsPrefix.JobWindowValid);
+            var dynExecSubName = EntitiesPathHelper.GetDynamicSubscriptionName<TJobPayload>(SchedulingynamicSubscriptionsPrefix.JobWindowValid_SUBNAME__JobExecution);
+            var dynSubSchedName = EntitiesPathHelper.GetDynamicSubscriptionName<TJobPayload>(SchedulingynamicSubscriptionsPrefix.JobWindowValid_SUBNAME__ScheduleNextRun);
+            _topics.Add(dynTopicName);
+            _subscriptions.Add(dynExecSubName);
+            _subscriptions.Add(dynSubSchedName);
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
             {
                 _topics.Add(retryPolicy.PermanentErrorsTopic);
@@ -113,20 +129,42 @@ namespace Servicebus.JobScheduler.Core
                 _buildTasks.Add(async (_) =>
                 {
                     await _pubSubProvider.RegisterSubscriber(
-                        SchedulingTopics.JobWindowValid.ToString(),
-                        SchedulingSubscriptions.JobWindowValid_JobExecution.ToString(),
+                        dynTopicName,
+                        dynExecSubName,
                         concurrencyLevel: 3,
                         mainHandler,
                         retryPolicy,
                         _source);
                 });
+
+                _buildTasks.Add(async (_) =>
+               {
+                   await _pubSubProvider.RegisterSubscriber(
+                   dynTopicName,
+                   dynSubSchedName,
+                   concurrencyLevel: 3,
+                   new ScheduleNextRunSubscriber(_logger.CreateLogger<ScheduleNextRunSubscriber>()),
+                   null,
+                   _source);
+               });
             }
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddRootJobExecuterType<THandler>(int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
+        public JobSchedulerBuilder AddRootJobExecuterType<THandler, TJobPayload>(int concurrencyLevel, RetryPolicy retryPolicy, bool enabled = true)
             where THandler : IMessageHandler<JobWindow<TJobPayload>>
         {
+            var scheduledJobType = EntitiesPathHelper.JobTypeName<TJobPayload>();
+            if (!_scheduledJobTypes.Add(scheduledJobType))
+            {
+                throw new InvalidProgramException($"Root with JobType {scheduledJobType} Handler already registered!, you may call AddRootJobExecuter only once per jobType");
+            }
+            var dynTopicName = EntitiesPathHelper.GetDynamicTopicName<TJobPayload>(SchedulingDynamicTopicsPrefix.JobWindowValid);
+            var dynExecSubName = EntitiesPathHelper.GetDynamicSubscriptionName<TJobPayload>(SchedulingynamicSubscriptionsPrefix.JobWindowValid_SUBNAME__JobExecution);
+            var dynSubSchedName = EntitiesPathHelper.GetDynamicSubscriptionName<TJobPayload>(SchedulingynamicSubscriptionsPrefix.JobWindowValid_SUBNAME__ScheduleNextRun);
+            _topics.Add(dynTopicName);
+            _subscriptions.Add(dynExecSubName);
+            _subscriptions.Add(dynSubSchedName);
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
             {
                 _topics.Add(retryPolicy.PermanentErrorsTopic);
@@ -136,17 +174,28 @@ namespace Servicebus.JobScheduler.Core
                 _buildTasks.Add(async (_) =>
                 {
                     await _pubSubProvider.RegisterSubscriberType<JobWindow<TJobPayload>, THandler>(
-                        SchedulingTopics.JobWindowValid.ToString(),
-                        SchedulingSubscriptions.JobWindowValid_JobExecution.ToString(),
+                        dynTopicName,
+                        dynExecSubName,
                         concurrencyLevel: 3,
                         retryPolicy,
                         _source);
+                });
+
+                _buildTasks.Add(async (_) =>
+                {
+                    await _pubSubProvider.RegisterSubscriber(
+                    dynTopicName,
+                    dynSubSchedName,
+                    concurrencyLevel: 3,
+                    new ScheduleNextRunSubscriber(_logger.CreateLogger<ScheduleNextRunSubscriber>()),
+                    null,
+                    _source);
                 });
             }
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddSubJobHandler<TMessageType>(string topic, string sub, IMessageHandler<TMessageType> handler, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true) where TMessageType : class, IJob
+        public JobSchedulerBuilder AddSubJobHandler<TMessageType>(string topic, string sub, IMessageHandler<TMessageType> handler, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true) where TMessageType : class, IJob
         {
             if (retryPolicy != null && !string.IsNullOrWhiteSpace(retryPolicy.PermanentErrorsTopic))
             {
@@ -170,7 +219,7 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> AddSubJobHandlerType<TMessageType, THandler>(string topic, string sub, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true)
+        public JobSchedulerBuilder AddSubJobHandlerType<TMessageType, THandler>(string topic, string sub, int concurrencyLevel, RetryPolicy retryPolicy = null, bool enabled = true)
             where TMessageType : class, IJob
             where THandler : IMessageHandler<TMessageType>
         {
@@ -195,7 +244,7 @@ namespace Servicebus.JobScheduler.Core
             return this;
         }
 
-        public JobSchedulerBuilder<TJobPayload> UseInMemoryPubsubProvider(bool use)
+        public JobSchedulerBuilder UseInMemoryPubsubProvider(bool use)
         {
             if (use)
             {

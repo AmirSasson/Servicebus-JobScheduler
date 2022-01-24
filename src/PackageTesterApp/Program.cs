@@ -30,11 +30,12 @@ namespace PackageTesterApp
                         })
                         .Build();
 
-            var builder = new JobSchedulerBuilder<JobData>()
+            var builder = new JobSchedulerBuilder()
                 .WithHandlersServiceProvider(host.Services)
                 .UseSchedulingWorker()
-                .WithCancelationSource(cancelToken)                
-                .AddRootJobExecuterType<EchoWindowExecutionSubscriber>(
+                .WithCancelationSource(cancelToken)
+                .UseInMemoryPubsubProvider(true)
+                .AddRootJobExecuterType<EchoWindowExecutionSubscriber, JobData>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = "TestPermamantErrors", RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) }
                     )
@@ -47,7 +48,7 @@ namespace PackageTesterApp
             return scheduler;
         }
 
-        private static Task seed(IJobScheduler<JobData> scheduler, CancellationTokenSource cancelToken)
+        private static Task seed(IJobScheduler scheduler, CancellationTokenSource cancelToken)
         {
             return Task.Run(async () =>
             {

@@ -10,7 +10,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
 {
     public class UpsertsClientSimulator
     {
-        public static async Task Run(IJobScheduler<JobCustomData> scheduler, int initialRuleCount, TimeSpan delayBetweenUpserts, int maxConcurrentRules, IRepository<Job<JobCustomData>> repo, ILogger logger, int? maxUpserts, TimeSpan ruleInterval, CancellationToken token)
+        public static async Task Run(IJobScheduler scheduler, int initialRuleCount, TimeSpan delayBetweenUpserts, int maxConcurrentRules, IRepository<Job<JobCustomData>> repo, ILogger logger, int? maxUpserts, TimeSpan ruleInterval, CancellationToken token)
         {
             var totalRulesCount = 0;
             logger.LogInformation($"Running Tester Client");
@@ -21,7 +21,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 {
                     Id = id,
                     RuleId = id,
-                    Payload = new JobCustomData { Query = "test Query", BehaviorMode = JobCustomData.JobBehaviorMode.Simple },
+                    Payload = new JobCustomData { Query = $"test Query {totalRulesCount}", BehaviorMode = JobCustomData.JobBehaviorMode.Simple, Complex = new ComplexCustomData { SomeList = new System.Collections.Generic.List<int> { totalRulesCount }, SomeDic = new System.Collections.Generic.Dictionary<string, int> { { id, totalRulesCount } } } },
                     //WindowTimeRangeSeconds = (int)ruleInterval.TotalSeconds,
                     //Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = (int)ruleInterval.TotalSeconds },
                     Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/3 * * * *" },

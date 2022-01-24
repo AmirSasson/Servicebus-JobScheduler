@@ -50,11 +50,11 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 if (executeOnUtc.HasValue)
                 {
                     int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
-                    var _ = new Timer((m) => { publishToSubscribers(m as BaseJob, topic); }, msg, Math.Max(due, 0), Timeout.Infinite);
+                    var _ = new Timer((m) => { publishToSubscribers(m as BaseJob, topic); }, (msgAfterSerializing as BaseJob), Math.Max(due, 0), Timeout.Infinite);
                 }
                 else
                 {
-                    await publishToSubscribers(msg, topic);
+                    await publishToSubscribers((msgAfterSerializing as BaseJob), topic);
                 }
             }
             catch (Exception e)
@@ -76,7 +76,9 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
             Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
             {
-                return await handler.Handle(msg as TMessage);
+                var typedString = JsonSerializer.Serialize(msg);
+                var typed = JsonSerializer.Deserialize<TMessage>(typedString);
+                return await handler.Handle(typed);
             };
 
             subscribers.Add(new HandlerSubscription { Name = handler.GetType().Name, HandlingFunc = handlingFunction });
@@ -100,8 +102,10 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 using var handlerScope = _serviceProvider.CreateScope();
 
                 var handler = handlerScope.ServiceProvider.GetService<THandler>();
+                var typedString = JsonSerializer.Serialize(msg);
+                var typed = JsonSerializer.Deserialize<TMessage>(typedString);
 
-                return await handler.Handle(msg as TMessage);
+                return await handler.Handle(typed);
             };
             subscribers.Add(new HandlerSubscription { Name = typeof(THandler).Name, HandlingFunc = handlingFunction });
             _eventHandlers[subscription] = subscribers;
