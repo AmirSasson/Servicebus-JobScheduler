@@ -23,7 +23,7 @@ namespace Servicebus.JobScheduler.ExampleApp.Handlers
         abstract protected Task<HandlerResponse> handlePrivate(TMsg msg);
 
 
-        public async Task<HandlerResponse> Handle(TMsg msg)
+        public async Task<HandlerResponse> Handle(TMsg msg, JobExecutionContext ctx)
         {
             bool shouldSimulateError()
             {

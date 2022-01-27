@@ -9,3 +9,4 @@
 *.~vsdx
 **/Joboutputs.*.csv
 **/appsettings.overrides.json
+/src/Servicebus.JobScheduler.ExampleApp/Servicebus.JobScheduler.ExampleApp.csproj.user

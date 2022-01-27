@@ -6,6 +6,6 @@ namespace Servicebus.JobScheduler.Core.Contracts
 {
     public interface IMessageHandler<TMessageType> where TMessageType : class, IJob
     {
-        Task<HandlerResponse> Handle(TMessageType msg);
+        Task<HandlerResponse> Handle(TMessageType msg, JobExecutionContext context);
     }
 }

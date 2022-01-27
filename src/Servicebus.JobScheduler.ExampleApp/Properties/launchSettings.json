@@ -7,7 +7,7 @@
     },
     "AllFails": {
       "commandName": "Project",
-      "commandLineArgs": "-r myRun-8000 -t true -x 90"
+      "commandLineArgs": "-r myRun-8000 -t true -x 100"
 
     },
     "ImmediateScheduleRule_Validation": {

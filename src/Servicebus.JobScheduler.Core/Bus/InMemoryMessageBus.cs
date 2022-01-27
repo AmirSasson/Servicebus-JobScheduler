@@ -19,8 +19,10 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
         class HandlerSubscription
         {
             public string Name { get; set; }
-            public Func<object, Task<HandlerResponse>> HandlingFunc { get; set; }
+            public Func<object, JobExecutionContext, Task<HandlerResponse>> HandlingFunc { get; set; }
         }
+
+        private const int MAX_RETRIES = 10;
         readonly Dictionary<string, IList<HandlerSubscription>> _eventHandlers = new();
         private readonly IServiceProvider _serviceProvider = null;
 
@@ -74,12 +76,12 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                 subscribers = new List<HandlerSubscription>();
             }
 
-            Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
-            {
-                var typedString = JsonSerializer.Serialize(msg);
-                var typed = JsonSerializer.Deserialize<TMessage>(typedString);
-                return await handler.Handle(typed);
-            };
+            Func<object, JobExecutionContext, Task<HandlerResponse>> handlingFunction = async (object msg, JobExecutionContext ctx) =>
+             {
+                 var typedString = JsonSerializer.Serialize(msg);
+                 var typed = JsonSerializer.Deserialize<TMessage>(typedString);
+                 return await handler.Handle(typed, ctx);
+             };
 
             subscribers.Add(new HandlerSubscription { Name = handler.GetType().Name, HandlingFunc = handlingFunction });
 
@@ -97,16 +99,16 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
             }
 
-            Func<object, Task<HandlerResponse>> handlingFunction = async (object msg) =>
-            {
-                using var handlerScope = _serviceProvider.CreateScope();
+            Func<object, JobExecutionContext, Task<HandlerResponse>> handlingFunction = async (object msg, JobExecutionContext ctx) =>
+             {
+                 using var handlerScope = _serviceProvider.CreateScope();
 
-                var handler = handlerScope.ServiceProvider.GetService<THandler>();
-                var typedString = JsonSerializer.Serialize(msg);
-                var typed = JsonSerializer.Deserialize<TMessage>(typedString);
+                 var handler = handlerScope.ServiceProvider.GetService<THandler>();
+                 var typedString = JsonSerializer.Serialize(msg);
+                 var typed = JsonSerializer.Deserialize<TMessage>(typedString);
 
-                return await handler.Handle(typed);
-            };
+                 return await handler.Handle(typed, ctx);
+             };
             subscribers.Add(new HandlerSubscription { Name = typeof(THandler).Name, HandlingFunc = handlingFunction });
             _eventHandlers[subscription] = subscribers;
             return Task.FromResult(true);
@@ -122,6 +124,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
         private async Task publishToSubscribers(BaseJob msg, string topic)
         {
+            var correlationId = Guid.NewGuid();
             foreach (var eventHandlersKvp in _eventHandlers)
             {
                 if (eventHandlersKvp.Key.ToString().Contains(topic.ToString(), StringComparison.InvariantCultureIgnoreCase))
@@ -136,11 +139,20 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
                         var retries = 0;
                         var success = false;
-                        while (!success && retries < 10)
+                        while (!success && retries < MAX_RETRIES)
                         {
                             try
                             {
-                                var result = await handleSubscription.HandlingFunc(msg);
+                                var result = await handleSubscription.HandlingFunc(msg, new JobExecutionContext
+                                {
+                                    RetryBatchesCount = retries,
+                                    IsLastRetry = retries == MAX_RETRIES - 1,
+                                    RetriesInCurrentBatch = retries,
+                                    MaxRetriesInBatch = MAX_RETRIES,
+                                    MaxRetryBatches = 0,
+                                    RetryPolicy = null,
+                                    MsgCorrelationId = correlationId.ToString()
+                                });
                                 success = true;
                                 _logger.LogInformation($"[{handlerName}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
 

@@ -14,7 +14,7 @@ namespace Servicebus.JobScheduler.Core
             _logger = logger;
         }
 
-        public Task<HandlerResponse> Handle(Job<object> msg)
+        public Task<HandlerResponse> Handle(Job<object> msg, JobExecutionContext ctx)
         {
             var shouldScheduleNextWindow = msg.Schedule.PeriodicJob;
             _logger.LogInformation($"handling JobDefinition should reschedule for later: {shouldScheduleNextWindow}");

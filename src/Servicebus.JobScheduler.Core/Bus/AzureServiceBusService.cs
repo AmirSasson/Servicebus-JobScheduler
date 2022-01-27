@@ -69,10 +69,10 @@ namespace Servicebus.JobScheduler.Core.Bus
         public async Task<bool> RegisterSubscriber<TMessage>(string topic, string subscription, int concurrencyLevel, IMessageHandler<TMessage> handler, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
             where TMessage : class, IJob
         {
-            Func<TMessage, Task<HandlerResponse>> handlingFunction = async (TMessage msg) =>
-            {
-                return await handler.Handle(msg);
-            };
+            Func<TMessage, JobExecutionContext, Task<HandlerResponse>> handlingFunction = async (TMessage msg, JobExecutionContext ctx) =>
+             {
+                 return await handler.Handle(msg, ctx);
+             };
             return await registerSubscriberPrivate(topic, subscription, handler.GetType().Name, handlingFunction, concurrencyLevel, deadLetterRetrying, source);
         }
 
@@ -82,19 +82,19 @@ namespace Servicebus.JobScheduler.Core.Bus
             where THandler : IMessageHandler<TMessage>
         {
 
-            Func<TMessage, Task<HandlerResponse>> handlingFunction = async (TMessage msg) =>
+            Func<TMessage, JobExecutionContext, Task<HandlerResponse>> handlingFunction = async (TMessage msg, JobExecutionContext ctx) =>
             {
                 using var handlerScope = _serviceProvider.CreateScope();
 
                 var handler = handlerScope.ServiceProvider.GetService<THandler>();
 
-                return await handler.Handle(msg);
+                return await handler.Handle(msg, ctx);
             };
             return await registerSubscriberPrivate(topic, subscription, typeof(THandler).Name, handlingFunction, concurrencyLevel, deadLetterRetrying, source);
         }
 
 
-        private async Task<bool> registerSubscriberPrivate<TMessage>(string topic, string subscription, string handlerName, Func<TMessage, Task<HandlerResponse>> handlingFunction, int concurrencyLevel, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
+        private async Task<bool> registerSubscriberPrivate<TMessage>(string topic, string subscription, string handlerName, Func<TMessage, JobExecutionContext, Task<HandlerResponse>> handlingFunction, int concurrencyLevel, Contracts.RetryPolicy deadLetterRetrying, CancellationTokenSource source)
                  where TMessage : class, IJob
         {
             var subscriptionClient = _clientEntities.GetOrAdd(
@@ -116,17 +116,37 @@ namespace Servicebus.JobScheduler.Core.Bus
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
             _logger.LogInformation($"Registering {handlerName} Subscriber to: {topic}:{subscription}");
+            var maxImmediateRetriesInBatch = _config.Value.GetSubscriberConfig(subscription).MaxImmediateRetriesInBatch;
             subscriptionClient.RegisterMessageHandler(
                 async (msg, cancel) =>
                 {
                     var str = Encoding.UTF8.GetString(msg.Body);
                     var obj = str.FromJson<TMessage>();
 
+
+                    msg.UserProperties.TryGetValue("retriesCount", out object retriesCountObj);
+                    var retryBatchesCount = Convert.ToInt32(retriesCountObj ?? 0);
+
                     using var ls = _logger.BeginScope("[{CorrelationId}]", msg.CorrelationId ?? $"{topic}:{subscription}/{obj.Id}");
                     _logger.LogInformation($"Incoming {topic}:{subscription}/{obj.Id} [{obj.GetType().Name}] delegate to {handlerName}");
                     try
                     {
-                        var handlerResponse = await handlingFunction(obj);
+                        var maxRetriesInBatch = maxImmediateRetriesInBatch;
+                        var maxRetryBatches = deadLetterRetrying?.RetryDefinition?.MaxRetryCount ?? 0;
+
+                        var execContext = new JobExecutionContext
+                        {
+                            MaxRetryBatches = maxRetryBatches,
+                            MaxRetriesInBatch = maxRetriesInBatch,
+                            RetryBatchesCount = retryBatchesCount,
+                            RetryPolicy = deadLetterRetrying,
+                            IsLastRetry = retryBatchesCount >= maxRetryBatches && msg.SystemProperties.DeliveryCount >= maxRetriesInBatch,
+                            MsgCorrelationId = msg.CorrelationId,
+                            RetriesInCurrentBatch = msg.SystemProperties.DeliveryCount
+                        };
+
+                        var handlerResponse = await handlingFunction(obj, execContext);
+
                         if (handlerResponse.ContinueWithResult != null)
                         {
                             await PublishAsync(handlerResponse.ContinueWithResult.Message, handlerResponse.ContinueWithResult.TopicToPublish, handlerResponse.ContinueWithResult.ExecuteOnUtc, msg.CorrelationId);

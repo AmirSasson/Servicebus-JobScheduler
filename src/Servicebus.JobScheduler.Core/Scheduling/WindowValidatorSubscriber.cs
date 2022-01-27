@@ -18,7 +18,7 @@ namespace Servicebus.JobScheduler.Core
             _logger = logger;
         }
 
-        public async Task<HandlerResponse> Handle(JobWindow<object> msg)
+        public async Task<HandlerResponse> Handle(JobWindow<object> msg, JobExecutionContext ctx)
         {
             // if (msg.RunId != _runId)
             // {
