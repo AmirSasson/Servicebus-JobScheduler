@@ -15,8 +15,8 @@ namespace Servicebus.JobScheduler.Core.Contracts
     public class ServiceBusConfig
     {
         public string ConnectionString { get; set; }
-        public Dictionary<string, TopicConfig> TopicsConfig { get; set; }
-        public Dictionary<string, SubscriberConfig> SubscribersConfig { get; set; }
+        public Dictionary<string, TopicConfig> TopicsConfig { get; set; } = new Dictionary<string, TopicConfig>();
+        public Dictionary<string, SubscriberConfig> SubscribersConfig { get; set; } = new Dictionary<string, SubscriberConfig>();
 
         public TopicConfig GetTopicConfig(string topicName)
         {
