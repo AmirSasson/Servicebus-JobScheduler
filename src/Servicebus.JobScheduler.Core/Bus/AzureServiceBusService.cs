@@ -23,7 +23,7 @@ namespace Servicebus.JobScheduler.Core.Bus
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IOptions<ServiceBusConfig> _config;
-        private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new();
+        private readonly ConcurrentDictionary<string, IClientEntity> _clientEntities = new ConcurrentDictionary<string, IClientEntity>();
 
         public AzureServiceBusService(IOptions<ServiceBusConfig> config, ILogger logger, IServiceProvider serviceProvider)
         {
@@ -42,7 +42,7 @@ namespace Servicebus.JobScheduler.Core.Bus
             var topicClient = _clientEntities.GetOrAdd(topic.ToString(), (path) => new TopicClient(connectionString: _config.Value.ConnectionString, entityPath: path)) as TopicClient;
             try
             {
-                Message message = new()
+                Message message = new Message()
                 {
                     MessageId = msg.Id,
                     ContentType = "application/json",

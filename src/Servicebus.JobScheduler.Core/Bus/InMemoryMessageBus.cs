@@ -23,7 +23,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
         }
 
         private const int MAX_RETRIES = 10;
-        readonly Dictionary<string, IList<HandlerSubscription>> _eventHandlers = new();
+        readonly Dictionary<string, IList<HandlerSubscription>> _eventHandlers = new Dictionary<string, IList<HandlerSubscription>>();
         private readonly IServiceProvider _serviceProvider = null;
 
         private readonly ILogger _logger;
@@ -119,7 +119,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
         public ValueTask DisposeAsync()
         {
-            return ValueTask.CompletedTask;
+            return new ValueTask(Task.CompletedTask);
         }
 
         private async Task publishToSubscribers(BaseJob msg, string topic)

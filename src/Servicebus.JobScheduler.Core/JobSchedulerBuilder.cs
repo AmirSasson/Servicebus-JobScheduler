@@ -24,12 +24,12 @@ namespace Servicebus.JobScheduler.Core
         private bool _initiateSchedulingWorkers = true;
         private CancellationTokenSource _source;
         private IJobChangeProvider _changeProvider = new EmptyChangeProvider();
-        private List<Action> _preBuildActions = new();
-        private List<Func<JobScheduler, Task>> _buildTasks = new();
+        private List<Action> _preBuildActions = new List<Action>();
+        private List<Func<JobScheduler, Task>> _buildTasks = new List<Func<JobScheduler, Task>>();
         private IServiceProvider _serviceProvider;
         private HashSet<string> _scheduledJobTypes = new HashSet<string>();
-        private readonly HashSet<string> _topics = Enum.GetNames<SchedulingTopics>().ToHashSet();
-        private readonly HashSet<string> _subscriptions = Enum.GetNames<SchedulingSubscriptions>().ToHashSet();
+        private readonly HashSet<string> _topics = Enum.GetNames(typeof(SchedulingTopics)).ToHashSet();
+        private readonly HashSet<string> _subscriptions = Enum.GetNames(typeof(SchedulingSubscriptions)).ToHashSet();
 
         public JobSchedulerBuilder UsePubsubProvider(Contracts.IMessageBus pubSubProvider)
         {
@@ -89,7 +89,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 action();
             }
-            
+
             _pubSubProvider = _pubSubProvider ?? new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
             var scheduler = new JobScheduler(_pubSubProvider, _logger.CreateLogger<JobScheduler>());
 
@@ -103,7 +103,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 await task(scheduler);
             }
-            
+
             return scheduler;
         }
 
@@ -263,7 +263,7 @@ namespace Servicebus.JobScheduler.Core
             {
                 _preBuildActions.Add(() =>
                 {
-                    _pubSubProvider = new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);                    
+                    _pubSubProvider = new AzureServiceBusService(_config, _logger.CreateLogger<AzureServiceBusService>(), _serviceProvider);
                 });
             }
             return this;

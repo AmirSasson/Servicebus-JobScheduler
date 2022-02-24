@@ -37,14 +37,14 @@ namespace Servicebus.JobScheduler.Core.Contracts
     }
     public class TopicConfig
     {
-        public static TopicConfig Default => new();
+        public static TopicConfig Default => new TopicConfig();
         public int MaxSizeInMegabytes { get; set; } = 1024;
         public bool EnablePartitioning { get; set; } = false;
 
     }
     public class SubscriberConfig
     {
-        public static SubscriberConfig Default => new();
+        public static SubscriberConfig Default => new SubscriberConfig();
         public int MaxImmediateRetriesInBatch { get; set; } = 5;
     }
 }

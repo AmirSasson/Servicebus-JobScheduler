@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>Servicebus.JobScheduler.Core</PackageId>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
     <Authors>Amir Sasson</Authors>
     <Company>Amir Sasson</Company>
     <PackageTags>JobScheduler;Azure;ServiceBus;EasySetup;Scalable</PackageTags>
