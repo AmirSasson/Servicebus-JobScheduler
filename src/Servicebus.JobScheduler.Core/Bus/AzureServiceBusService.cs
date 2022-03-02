@@ -142,7 +142,9 @@ namespace Servicebus.JobScheduler.Core.Bus
                             RetryPolicy = deadLetterRetrying,
                             IsLastRetry = retryBatchesCount >= maxRetryBatches && msg.SystemProperties.DeliveryCount >= maxRetriesInBatch,
                             MsgCorrelationId = msg.CorrelationId,
-                            RetriesInCurrentBatch = msg.SystemProperties.DeliveryCount
+                            RetriesInCurrentBatch = msg.SystemProperties.DeliveryCount,
+                            ScheduledToUtc = msg.ScheduledEnqueueTimeUtc,
+                            PublishedAtUtc = msg.SystemProperties.EnqueuedTimeUtc
                         };
 
                         var handlerResponse = await handlingFunction(obj, execContext);

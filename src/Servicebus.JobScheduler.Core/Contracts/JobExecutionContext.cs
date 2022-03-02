@@ -1,3 +1,5 @@
+using System;
+
 namespace Servicebus.JobScheduler.Core.Contracts
 {
     public class JobExecutionContext
@@ -9,5 +11,7 @@ namespace Servicebus.JobScheduler.Core.Contracts
         public int RetriesInCurrentBatch { get; internal set; }
         public int MaxRetryBatches { get; internal set; }
         public int MaxRetriesInBatch { get; internal set; }
+        public DateTime ScheduledToUtc { get; internal set; }
+        public DateTime PublishedAtUtc { get; internal set; }
     }
 }

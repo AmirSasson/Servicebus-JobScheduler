@@ -49,14 +49,16 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                     throw new ArgumentException("Message Id cannot be null or empty");
                 }
 
+                var utcNow = DateTime.UtcNow;
+
                 if (executeOnUtc.HasValue)
                 {
                     int due = (int)(executeOnUtc.Value - DateTime.UtcNow).TotalMilliseconds;
-                    var _ = new Timer((m) => { publishToSubscribers(m as BaseJob, topic); }, (msgAfterSerializing as BaseJob), Math.Max(due, 0), Timeout.Infinite);
+                    var _ = new Timer((m) => { publishToSubscribers(m as BaseJob, topic, executeOnUtc.Value, utcNow); }, (msgAfterSerializing as BaseJob), Math.Max(due, 0), Timeout.Infinite);
                 }
                 else
                 {
-                    await publishToSubscribers((msgAfterSerializing as BaseJob), topic);
+                    await publishToSubscribers((msgAfterSerializing as BaseJob), topic, utcNow, utcNow);
                 }
             }
             catch (Exception e)
@@ -122,7 +124,7 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
             return new ValueTask(Task.CompletedTask);
         }
 
-        private async Task publishToSubscribers(BaseJob msg, string topic)
+        private async Task publishToSubscribers(BaseJob msg, string topic, DateTime scheduledTo, DateTime publishedAt)
         {
             var correlationId = Guid.NewGuid();
             foreach (var eventHandlersKvp in _eventHandlers)
@@ -151,7 +153,9 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                                     MaxRetriesInBatch = MAX_RETRIES,
                                     MaxRetryBatches = 0,
                                     RetryPolicy = null,
-                                    MsgCorrelationId = correlationId.ToString()
+                                    MsgCorrelationId = correlationId.ToString(),
+                                    ScheduledToUtc = scheduledTo,
+                                    PublishedAtUtc = publishedAt
                                 });
                                 success = true;
                                 _logger.LogInformation($"[{handlerName}] - [{msg.Id}] - [{topic}] Success, result : {result.ToJson()} ");
