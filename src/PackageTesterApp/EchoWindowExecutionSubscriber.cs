@@ -5,7 +5,7 @@ namespace PackageTesterApp
 {
     public class EchoWindowExecutionSubscriber : IMessageHandler<JobWindow<JobData>>
     {
-        public Task<HandlerResponse> Handle(JobWindow<JobData> msg)
+        public Task<HandlerResponse> Handle(JobWindow<JobData> msg, JobExecutionContext context)
         {
             System.Console.WriteLine(msg.Payload.Name);
             return HandlerResponse.FinalOkAsTask;
