@@ -53,6 +53,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 if (executeOnUtc.HasValue)
                 {
                     message.ScheduledEnqueueTimeUtc = executeOnUtc.Value;
+                    message.UserProperties["JobOrigScheduledUnixTimeMs"] = new DateTimeOffset(executeOnUtc.Value).ToUnixTimeMilliseconds();
                 }
 
                 var scheduledEnqueueTimeUtcDescription = executeOnUtc.HasValue ? executeOnUtc.ToString() : "NOW";
@@ -133,6 +134,11 @@ namespace Servicebus.JobScheduler.Core.Bus
                     {
                         var maxRetriesInBatch = maxImmediateRetriesInBatch;
                         var maxRetryBatches = deadLetterRetrying?.RetryDefinition?.MaxRetryCount ?? 0;
+                        DateTime jobOrigScheduledUnixTimeMs = DateTime.UtcNow;
+                        if (msg.UserProperties.TryGetValue("JobOrigScheduledUnixTimeMs", out object JobOrigScheduledUnixTimeMs))
+                        {
+                            jobOrigScheduledUnixTimeMs = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(JobOrigScheduledUnixTimeMs)).UtcDateTime;
+                        }
 
                         var execContext = new JobExecutionContext
                         {
@@ -144,7 +150,8 @@ namespace Servicebus.JobScheduler.Core.Bus
                             MsgCorrelationId = msg.CorrelationId,
                             RetriesInCurrentBatch = msg.SystemProperties.DeliveryCount,
                             ScheduledToUtc = msg.ScheduledEnqueueTimeUtc,
-                            PublishedAtUtc = msg.SystemProperties.EnqueuedTimeUtc
+                            PublishedAtUtc = msg.SystemProperties.EnqueuedTimeUtc,
+                            JobScheduledToUtc = jobOrigScheduledUnixTimeMs
                         };
 
                         var handlerResponse = await handlingFunction(obj, execContext);

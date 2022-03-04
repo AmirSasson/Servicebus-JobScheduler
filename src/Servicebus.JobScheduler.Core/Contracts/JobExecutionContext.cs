@@ -13,5 +13,6 @@ namespace Servicebus.JobScheduler.Core.Contracts
         public int MaxRetriesInBatch { get; internal set; }
         public DateTime ScheduledToUtc { get; internal set; }
         public DateTime PublishedAtUtc { get; internal set; }
+        public DateTime JobScheduledToUtc { get; internal set; }
     }
 }
