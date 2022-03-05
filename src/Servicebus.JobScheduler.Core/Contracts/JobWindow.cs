@@ -7,6 +7,7 @@ namespace Servicebus.JobScheduler.Core.Contracts
         public DateTime FromTime { get; set; }
         public DateTime ToTime { get; set; }
         public string WindowId => $"{base.RuleId}[{FromTime}->{ToTime}]";
+        public DateTime ScheduledToUtc { get; set; }
     }
 }
 

@@ -45,6 +45,7 @@ namespace Servicebus.JobScheduler.Core
 
             if (nextWindowToTime.HasValue)
             {
+                var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
                 var window = new JobWindow<dynamic> //TODO: Auto mapper
                 {
                     Id = $"{nextWindowFromTime:HH:mm:ss}-{nextWindowToTime:HH:mm:ss}#{msg.RuleId}",
@@ -58,10 +59,10 @@ namespace Servicebus.JobScheduler.Core
                     JobDefinitionChangeTime = msg.JobDefinitionChangeTime,
                     Status = msg.Status,
                     SkipNextWindowValidation = msg.Schedule.ForceSuppressWindowValidation || false,
-                    JobType = msg.JobType
+                    JobType = msg.JobType,
+                    ScheduledToUtc = nextWindowToTime.Value.Add(executionDelay)
                 };
-                var executionDelay = msg.Schedule.RunDelayUponDueTimeSeconds.HasValue ? TimeSpan.FromSeconds(msg.Schedule.RunDelayUponDueTimeSeconds.Value) : TimeSpan.Zero;
-                return new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = window, TopicToPublish = SchedulingTopics.JobInstanceReadyToRun.ToString(), ExecuteOnUtc = window.ToTime.Add(executionDelay) } };
+                return new HandlerResponse { ResultStatusCode = 200, ContinueWithResult = new HandlerResponse.ContinueWith { Message = window, TopicToPublish = SchedulingTopics.JobInstanceReadyToRun.ToString(), ExecuteOnUtc = window.ScheduledToUtc } };
             }
             return HandlerResponse.FinalOk;
         }
