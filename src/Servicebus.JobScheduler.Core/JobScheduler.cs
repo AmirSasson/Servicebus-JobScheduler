@@ -39,14 +39,18 @@ namespace Servicebus.JobScheduler.Core
 
         public async Task ScheduleOnce<TJobPayload>(Job<TJobPayload> job, DateTime? executeOnUtc = null)
         {
-            job.JobType = EntitiesPathHelper.JobTypeName<TJobPayload>(); ;
             Validator.EnsureNotNull(job.Id, "job id must be specified");
-            if (job.Schedule == null)
+
+            JobWindow<TJobPayload> jobWindow = job.ToJson().FromJson<JobWindow<TJobPayload>>();
+            jobWindow.JobType = EntitiesPathHelper.JobTypeName<TJobPayload>();
+
+            if (jobWindow.Schedule == null)
             {
-                job.Schedule = new JobSchedule { };
+                jobWindow.Schedule = new JobSchedule { };
             }
-            job.Schedule.PeriodicJob = false;
-            await _pubSubProvider.PublishAsync(job, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
+            jobWindow.Schedule.PeriodicJob = false;
+            jobWindow.ScheduledToUtc = executeOnUtc ?? DateTime.UtcNow;
+            await _pubSubProvider.PublishAsync(jobWindow, SchedulingTopics.JobInstanceReadyToRun.ToString(), executeOnUtc);
         }
 
         internal async Task SetupEntities(IEnumerable<string> topicsNames, IEnumerable<string> subscriptionNames)
