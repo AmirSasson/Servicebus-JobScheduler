@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 
 namespace Servicebus.JobScheduler.Core.Utils
@@ -11,12 +12,22 @@ namespace Servicebus.JobScheduler.Core.Utils
 
         public static T FromJson<T>(this string serialized)
         {
-            return JsonSerializer.Deserialize<T>(serialized);
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(serialized);
+        }
+
+        public static T FromJson<T>(this string serialized, Type asType)
+        {
+            return (T)Newtonsoft.Json.JsonConvert.DeserializeObject(serialized, asType);
         }
 
         public static string ToJson<T>(this T o)
         {
-            return JsonSerializer.Serialize(o);
+            return Newtonsoft.Json.JsonConvert.SerializeObject(o);
+        }
+
+        public static string ToJson<T>(this T o, Type asType)
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(o, asType, new Newtonsoft.Json.JsonSerializerSettings { });
         }
     }
 }

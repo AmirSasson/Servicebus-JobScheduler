@@ -21,7 +21,21 @@ namespace Servicebus.JobScheduler.ExampleApp.Emulators
                 {
                     Id = id,
                     RuleId = id,
-                    Payload = new JobCustomData { Query = $"test Query {totalRulesCount}", BehaviorMode = JobCustomData.JobBehaviorMode.Simple, Complex = new ComplexCustomData { SomeList = new System.Collections.Generic.List<int> { totalRulesCount }, SomeDic = new System.Collections.Generic.Dictionary<string, int> { { id, totalRulesCount } } } },
+                    Payload = new JobCustomData
+                    {
+                        Query = $"test Query {totalRulesCount}",
+                        BehaviorMode = JobCustomData.JobBehaviorMode.Simple,
+                        Complex = new ComplexCustomData
+                        {
+                            SomeList = new System.Collections.Generic.List<int> { totalRulesCount },
+                            SomeDic = new System.Collections.Generic.Dictionary<string, object>
+                            {
+                                { id, totalRulesCount },
+                                { "yo", "yo string" },
+                                 { "yo-int5", 5 }
+                            }
+                        }
+                    },
                     //WindowTimeRangeSeconds = (int)ruleInterval.TotalSeconds,
                     //Schedule = new JobSchedule { PeriodicJob = true, RunIntervalSeconds = (int)ruleInterval.TotalSeconds },
                     Schedule = new JobSchedule { PeriodicJob = true, CronSchedulingExpression = "*/3 * * * *" },

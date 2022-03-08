@@ -20,6 +20,6 @@ namespace Servicebus.JobScheduler.ExampleApp.Common
     {
         public List<int> SomeList { get; set; }
 
-        public Dictionary<string, int> SomeDic { get; set; }
+        public Dictionary<string, object> SomeDic { get; set; }
     }
 }

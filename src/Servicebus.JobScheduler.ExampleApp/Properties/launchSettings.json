@@ -2,7 +2,7 @@
   "profiles": {
     "AllSystem": {
       "commandName": "Project",
-      "commandLineArgs": "-r myRun-11 -t true"
+      "commandLineArgs": "-r myRun-11 -t true --local-bus true"
 
     },
     "AllFails": {

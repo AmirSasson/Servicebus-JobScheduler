@@ -139,7 +139,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .WithHandlersServiceProvider(host.Services)
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
-                .UseAzureServicePubsubProvider(options.LocalServiceBus == false)
+                .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddRootJobExecuterType<WindowExecutionSubscriber, JobCustomData>(
                     concurrencyLevel: 3,
                     new RetryPolicy { PermanentErrorsTopic = Topics.PermanentExecutionErrors.ToString(), RetryDefinition = new RetryExponential(TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), 3) },
@@ -190,7 +190,7 @@ namespace Servicebus.JobScheduler.ExampleApp
                 .UseSchedulingWorker(options.ShouldRunSchedulingWorkers())
                 .WithCancelationSource(source)
                 .WithConfiguration(sbOptions)
-                .UseAzureServicePubsubProvider(options.LocalServiceBus == false)
+                .UseInMemoryPubsubProvider(options.LocalServiceBus == true)
                 .AddRootJobExecuter<JobCustomData>(
                     new WindowExecutionSubscriber(loggerFactory.CreateLogger<WindowExecutionSubscriber>(), options.ExecErrorRate, TimeSpan.FromSeconds(1.5)),
                     concurrencyLevel: 3,

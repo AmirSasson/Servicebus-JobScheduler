@@ -41,9 +41,10 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
             _logger.LogInformation($"Publishing to {topic} MessageId: {msg.Id} Time to Execute: {scheduledEnqueueTimeUtcDescription}");
             try
             {
-                var testSerializationNotFailing = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType()));
+                var testSerializationNotFailing = Encoding.UTF8.GetBytes(msg.ToJson(msg.GetType()));
                 var str = Encoding.UTF8.GetString(testSerializationNotFailing);
-                var msgAfterSerializing = JsonSerializer.Deserialize(str, msg.GetType());
+                //object msgAfterSerializing = JsonSerializer.Deserialize(str, msg.GetType());
+                object msgAfterSerializing = str.FromJson<object>(msg.GetType());
                 if (string.IsNullOrWhiteSpace((msgAfterSerializing as BaseJob).Id))
                 {
                     throw new ArgumentException("Message Id cannot be null or empty");
@@ -80,8 +81,8 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
 
             Func<object, JobExecutionContext, Task<HandlerResponse>> handlingFunction = async (object msg, JobExecutionContext ctx) =>
              {
-                 var typedString = JsonSerializer.Serialize(msg);
-                 var typed = JsonSerializer.Deserialize<TMessage>(typedString);
+                 var typedString = msg.ToJson();
+                 TMessage typed = typedString.FromJson<TMessage>();// JsonSerializer.Deserialize<TMessage>(typedString);
                  return await handler.Handle(typed, ctx);
              };
 
@@ -106,8 +107,12 @@ namespace Servicebus.JobScheduler.Core.Bus.Emulator
                  using var handlerScope = _serviceProvider.CreateScope();
 
                  var handler = handlerScope.ServiceProvider.GetService<THandler>();
-                 var typedString = JsonSerializer.Serialize(msg);
-                 var typed = JsonSerializer.Deserialize<TMessage>(typedString);
+
+                 var typedString = msg.ToJson();
+                 TMessage typed = typedString.FromJson<TMessage>();// JsonSerializer.Deserialize<TMessage>(typedString);
+
+                 //var typedString = JsonSerializer.Serialize(msg);
+                 //var typed = JsonSerializer.Deserialize<TMessage>(typedString);
 
                  return await handler.Handle(typed, ctx);
              };

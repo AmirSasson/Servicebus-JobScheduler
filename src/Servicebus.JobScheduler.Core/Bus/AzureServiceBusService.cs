@@ -46,7 +46,7 @@ namespace Servicebus.JobScheduler.Core.Bus
                 {
                     MessageId = msg.Id,
                     ContentType = "application/json",
-                    Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg, msg.GetType())),
+                    Body = Encoding.UTF8.GetBytes(msg.ToJson(msg.GetType())),
                     PartitionKey = msg.Id,
                     CorrelationId = correlationId ?? Guid.NewGuid().ToString()
                 };
